@@ -3,8 +3,21 @@ export const STORAGE_KEY = '@hyperactive_logs';
 export const saveWorkoutLog = (workoutId, exerciseId, kg, reps) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const existingStr = localStorage.getItem(STORAGE_KEY);
-    const logs = existingStr ? JSON.parse(existingStr) : {};
+    let existingStr;
+    try {
+      existingStr = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      existingStr = null;
+    }
+    
+    let logs = {};
+    if (existingStr) {
+      try {
+        logs = JSON.parse(existingStr);
+      } catch {
+        logs = {}; // reset if corrupted
+      }
+    }
 
     if (!logs[today]) {
         logs[today] = {

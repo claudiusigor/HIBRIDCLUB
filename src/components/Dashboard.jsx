@@ -10,12 +10,7 @@ import WorkoutExecution from './WorkoutExecution';
 
 const TABS = { HOME: 'home', STATS: 'stats', NUTRITION: 'nutrition', HISTORY: 'history' };
 
-/* Running shoe SVG for cardio days */
-const ShoeIcon = ({ className }) => (
-  <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M21.4 11.6l-1.8-1.6c-.2-.2-.4-.3-.7-.3h-2.3l-1.1-1.7c-.3-.4-.7-.7-1.2-.7H8.9c-.7 0-1.3.4-1.6 1L5.1 13H3.5c-.8 0-1.5.7-1.5 1.5v2c0 .8.7 1.5 1.5 1.5h17c.8 0 1.5-.7 1.5-1.5v-3.2c0-.7-.2-1.3-.6-1.7zM6.5 16c-.8 0-1.5-.7-1.5-1.5S5.7 13 6.5 13s1.5.7 1.5 1.5S7.3 16 6.5 16z"/>
-  </svg>
-);
+/* ShoeIcon removed, using /icontenis.png directly */
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState(TABS.HOME);
@@ -41,7 +36,7 @@ export default function Dashboard() {
       <header className="sticky top-0 z-40 bg-light-bg/80 dark:bg-dark-bg/80 backdrop-blur-lg px-5 pt-5 pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[13px] text-gray-500 dark:text-gray-400 font-medium">Olá, Claudius</p>
+            <p className="text-[13px] text-gray-600 dark:text-gray-400 font-medium">Olá, Claudius</p>
             <h1 className="text-[22px] font-bold tracking-tight leading-tight text-gray-900 dark:text-white">Mantenha-se Ativo!</h1>
           </div>
           <button
@@ -69,9 +64,10 @@ export default function Dashboard() {
         {activeTab === TABS.HISTORY && <HistoryPage />}
       </div>
 
-      {/* ─── BOTTOM TAB BAR (no labels, icons only) ─── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-light-card/90 dark:bg-dark-card/90 backdrop-blur-xl border-t border-light-separator dark:border-dark-separator">
-        <div className="flex justify-around items-center h-12">
+      {/* ─── BOTTOM FLOATING DOCK (no labels, icons only) ─── */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-auto">
+        <nav className="glass-card !border-white/30 dark:!border-white/10 !rounded-full px-6 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)]">
+          <div className="flex justify-between items-center h-10 w-[240px] max-w-[90vw]">
           {[
             { id: TABS.HOME, Icon: Home },
             { id: TABS.STATS, Icon: Activity },
@@ -84,7 +80,7 @@ export default function Dashboard() {
                 key={id}
                 onClick={() => setActiveTab(id)}
                 className={`flex items-center justify-center w-12 h-12 transition-colors ${
-                  isActive ? 'text-lime-400' : 'text-gray-400 dark:text-gray-500'
+                  isActive ? 'text-[#0B5ED7]' : 'text-gray-600 dark:text-gray-400'
                 }`}
               >
                 <Icon size={24} strokeWidth={isActive ? 2.5 : 1.8} />
@@ -92,7 +88,8 @@ export default function Dashboard() {
             );
           })}
         </div>
-      </nav>
+        </nav>
+      </div>
     </div>
   );
 }
@@ -110,18 +107,18 @@ function HomeContent({ days, selectedDay, setSelectedDay, activeWorkout, onStart
             <button
               key={w.id}
               onClick={() => setSelectedDay(w.id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-all duration-200 ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-[20px] transition-all duration-300 ${
                 isActive
-                  ? 'bg-lime-400 text-black shadow-[0_2px_12px_rgba(208,253,62,0.3)]'
-                  : 'bg-light-card dark:bg-dark-card text-gray-500 dark:text-gray-400 border border-light-separator dark:border-dark-separator'
+                  ? 'bg-[#0B5ED7] text-white shadow-[0_8px_16px_rgba(11,94,215,0.3)]'
+                  : 'bg-[#F2F7FD] dark:bg-white/5 text-[#0B5ED7] dark:text-[#6EA8FF] border border-transparent'
               }`}
             >
-              <span className={`text-[10px] font-bold uppercase tracking-wide ${isActive ? 'text-black/60' : ''}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-white/80' : 'opacity-80'}`}>
                 {w.day.substring(0, 3)}
               </span>
-              <span className="text-[16px] font-bold leading-none">{w.id}</span>
+              <span className="text-[18px] font-bold leading-none mt-0.5">{w.id}</span>
               {isCardioDay && (
-                <ShoeIcon className={`mt-0.5 ${isActive ? 'text-black/50' : 'text-gray-400 dark:text-gray-500'}`} />
+                <img src="/icontenis.png" alt="Cardio" className="-mb-2 mt-0.5 w-12 h-12 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]" />
               )}
             </button>
           );

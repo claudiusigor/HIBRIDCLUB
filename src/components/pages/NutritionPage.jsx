@@ -34,7 +34,7 @@ export default function NutritionPage() {
 
       <div className="flex flex-col gap-4">
         {/* Water */}
-        <div className="bg-light-card dark:bg-dark-card rounded-2xl p-5 border border-light-separator dark:border-dark-separator transition-colors">
+        <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
@@ -42,7 +42,7 @@ export default function NutritionPage() {
               </div>
               <div>
                 <p className="text-[15px] font-bold text-gray-900 dark:text-white">Hidratação</p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold">Meta: {targetWater / 1000}L</p>
+                <p className="text-[11px] text-gray-600 dark:text-gray-400 font-semibold">Meta: {targetWater / 1000}L</p>
               </div>
             </div>
             <p className="text-2xl font-bold text-cyan-500">{(data.water / 1000).toFixed(1)}<span className="text-sm">L</span></p>
@@ -54,17 +54,17 @@ export default function NutritionPage() {
           </div>
 
           <div className="flex gap-2">
-            <button onClick={() => addWater(250)} className="flex-1 h-10 bg-cyan-500/10 text-cyan-500 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform">
+            <button onClick={() => addWater(250)} className="flex-1 h-10 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform">
               <Plus size={14} /> 250ml
             </button>
-            <button onClick={() => addWater(500)} className="flex-1 h-10 bg-cyan-500/10 text-cyan-500 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform">
+            <button onClick={() => addWater(500)} className="flex-1 h-10 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform">
               <Plus size={14} /> 500ml
             </button>
           </div>
         </div>
 
         {/* Calories */}
-        <div className="bg-light-card dark:bg-dark-card rounded-2xl p-5 border border-light-separator dark:border-dark-separator transition-colors">
+        <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
@@ -72,7 +72,7 @@ export default function NutritionPage() {
               </div>
               <div>
                 <p className="text-[15px] font-bold text-gray-900 dark:text-white">Calorias</p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold">Limite: {targetCalories} kcal</p>
+                <p className="text-[11px] text-gray-600 dark:text-gray-400 font-semibold">Limite: {targetCalories} kcal</p>
               </div>
             </div>
             <p className={`text-2xl font-bold ${calPct >= 100 ? 'text-red-500' : 'text-orange-500'}`}>{data.calories}</p>
@@ -89,7 +89,7 @@ export default function NutritionPage() {
               placeholder="Kcal consumida"
               value={calInput}
               onChange={(e) => setCalInput(e.target.value)}
-              className="flex-1 h-10 bg-light-bg dark:bg-dark-surface rounded-xl px-3 text-[14px] font-semibold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:ring-2 ring-orange-500 transition-shadow"
+              className="flex-1 h-10 bg-light-bg dark:bg-dark-surface rounded-xl px-3 text-[14px] font-semibold text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-600 outline-none focus:ring-2 ring-orange-500 transition-shadow"
             />
             <button onClick={addCalories} className="w-10 h-10 bg-orange-500 text-white rounded-xl flex items-center justify-center shrink-0 active:scale-95 transition-transform">
               <Plus size={18} />

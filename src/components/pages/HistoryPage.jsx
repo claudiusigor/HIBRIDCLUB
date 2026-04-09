@@ -32,7 +32,7 @@ export default function HistoryPage() {
           return (
             <div
               key={dateStr}
-              className="bg-light-card dark:bg-dark-card rounded-2xl p-4 border border-light-separator dark:border-dark-separator transition-colors"
+              className="glass-card p-4"
             >
               {/* Header */}
               <div className="flex justify-between items-center mb-3 pb-3 border-b border-light-separator dark:border-dark-separator">

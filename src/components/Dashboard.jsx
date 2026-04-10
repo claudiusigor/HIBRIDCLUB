@@ -61,18 +61,11 @@ function getInitialTheme() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-function getIsStandaloneMode() {
-  if (typeof window === 'undefined') return false;
-
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-}
-
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState(TABS.HOME);
   const [selectedDay, setSelectedDay] = useState('A');
   const [isExecuting, setIsExecuting] = useState(false);
   const [isDark, setIsDark] = useState(getInitialTheme);
-  const [isStandaloneMode, setIsStandaloneMode] = useState(getIsStandaloneMode);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallAvailable, setIsInstallAvailable] = useState(false);
 
@@ -107,28 +100,6 @@ export default function Dashboard() {
         mediaQuery.removeEventListener('change', handleSystemThemeChange);
       } else {
         mediaQuery.removeListener(handleSystemThemeChange);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const displayModeQuery = window.matchMedia('(display-mode: standalone)');
-
-    const handleDisplayModeChange = (event) => {
-      setIsStandaloneMode(event.matches || window.navigator.standalone === true);
-    };
-
-    if (displayModeQuery.addEventListener) {
-      displayModeQuery.addEventListener('change', handleDisplayModeChange);
-    } else {
-      displayModeQuery.addListener(handleDisplayModeChange);
-    }
-
-    return () => {
-      if (displayModeQuery.removeEventListener) {
-        displayModeQuery.removeEventListener('change', handleDisplayModeChange);
-      } else {
-        displayModeQuery.removeListener(handleDisplayModeChange);
       }
     };
   }, []);
@@ -197,16 +168,8 @@ export default function Dashboard() {
 
   return (
     <div
-      className="min-h-[100dvh] bg-[#F5F7FB] text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white"
-      style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
+      className="min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white"
     >
-      {isStandaloneMode && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40">
-          <div className="h-24 bg-gradient-to-t from-[#EDEFF5] via-[#F5F7FB]/92 to-transparent dark:from-[#05070C] dark:via-[#0A0D14]/94 dark:to-transparent" />
-          <div className="h-[calc(env(safe-area-inset-bottom,0px)+14px)] bg-[#EDEFF5] dark:bg-[#05070C]" />
-        </div>
-      )}
-
       <header
         className="sticky top-0 z-40 border-b border-black/[0.04] bg-[#F5F7FB]/94 px-5 pb-4 pt-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[#0A0D14]/92"
       >
@@ -318,10 +281,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div
-        className="fixed left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2"
-        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
-      >
+      <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2">
         <nav className="rounded-[28px] border border-black/[0.04] bg-white/92 px-3 py-2 shadow-[0_18px_40px_rgba(15,23,42,0.16)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#10141E]/88 dark:shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
           <div className="grid grid-cols-5 gap-1">
             {DOCK_ITEMS.map((item) => {

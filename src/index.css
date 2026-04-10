@@ -32,7 +32,6 @@
 
   #root {
     isolation: isolate;
-    background-color: inherit;
   }
 }
 

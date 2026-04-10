@@ -17,9 +17,10 @@ export default defineConfig({
         description: 'Aplicativo de monitoramento híbrido',
         start_url: basePath,
         scope: basePath,
-        theme_color: '#0D0D0D',
-        background_color: '#0D0D0D',
+        theme_color: '#0A0D14',
+        background_color: '#0A0D14',
         display: 'fullscreen',
+        display_override: ['fullscreen', 'standalone'],
         orientation: 'portrait',
         icons: [
           {

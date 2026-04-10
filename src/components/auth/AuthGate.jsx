@@ -4,9 +4,19 @@ import Dashboard from '../Dashboard';
 import OnboardingScreen from './OnboardingScreen';
 import LoginScreen from './LoginScreen';
 import ProfileSetupScreen from './ProfileSetupScreen';
+import PlanStartScreen from './PlanStartScreen';
+import PlanLevelPickerScreen from './PlanLevelPickerScreen';
+import PlanImportScreen from './PlanImportScreen';
 import { isSupabaseConfigured } from '../../lib/supabaseClient';
 import { clearLocalSession, getCurrentSession, onAuthStateChange, signOutUser } from '../../services/auth';
-import { ensureUserPlan } from '../../services/plans';
+import {
+  createUserPlanFromTemplate,
+  ensureUserPlan,
+  importPlanFromSvg,
+  listPlanTemplates,
+  publishUserPlanDraft,
+  saveUserPlanDraft,
+} from '../../services/plans';
 import {
   completeUserProfile,
   deriveDisplayNameFromUser,
@@ -20,6 +30,9 @@ const ONBOARDING_STORAGE_KEY = 'hyperactive-onboarding-seen';
 const PLAN_PREPARE_TIMEOUT_MS = 12000;
 const PLAN_CACHE_PREFIX = 'hibrid-plan-cache:';
 const PROFILE_CACHE_PREFIX = 'hibrid-profile-cache:';
+const THEME_STORAGE_KEY = 'hyperactive-theme';
+const DARK_THEME_COLOR = '#0A0D14';
+const LIGHT_THEME_COLOR = '#F5F7FB';
 
 const STAGES = {
   LOADING_SESSION: 'loading_session',
@@ -27,6 +40,9 @@ const STAGES = {
   PREPARING_PROFILE: 'preparing_profile',
   PREPARE_ERROR: 'prepare_error',
   NEEDS_PROFILE_SETUP: 'needs_profile_setup',
+  PLAN_SETUP: 'plan_setup',
+  PLAN_LEVEL_PICKER: 'plan_level_picker',
+  PLAN_IMPORT: 'plan_import',
   APP: 'app',
   AUTH_ERROR: 'auth_error',
   AUTH: 'auth',
@@ -95,6 +111,14 @@ function getSetupDisplayName(profile, user) {
   return profile?.display_name || deriveDisplayNameFromUser(user);
 }
 
+function getInitialTheme() {
+  if (typeof window === 'undefined') return true;
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === 'light') return false;
+  if (savedTheme === 'dark') return true;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
 export default function AuthGate() {
   const [stage, setStage] = useState(STAGES.LOADING_SESSION);
   const [session, setSession] = useState(null);
@@ -104,6 +128,11 @@ export default function AuthGate() {
   const [isAuthBusy, setIsAuthBusy] = useState(false);
   const [profileSetupMode, setProfileSetupMode] = useState('required');
   const [prepareRetryNonce, setPrepareRetryNonce] = useState(0);
+  const [planTemplates, setPlanTemplates] = useState([]);
+  const [selectedTemplateSlug, setSelectedTemplateSlug] = useState('hibrid-club-basic');
+  const [importedPlanDraft, setImportedPlanDraft] = useState(null);
+  const [planSetupMessage, setPlanSetupMessage] = useState('');
+  const [isDark, setIsDark] = useState(getInitialTheme);
 
   const preparePromiseRef = useRef(null);
   const activeUserIdRef = useRef(null);
@@ -112,12 +141,70 @@ export default function AuthGate() {
   const isConfigured = useMemo(() => isSupabaseConfigured, []);
 
   useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+    window.localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', isDark ? DARK_THEME_COLOR : LIGHT_THEME_COLOR);
+    }
+  }, [isDark]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = (event) => {
+      const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+      if (!savedTheme) {
+        setIsDark(event.matches);
+      }
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleSystemThemeChange);
+    } else {
+      mediaQuery.addListener(handleSystemThemeChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleSystemThemeChange);
+      } else {
+        mediaQuery.removeListener(handleSystemThemeChange);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     activePlanRef.current = activePlan;
   }, [activePlan]);
 
   useEffect(() => {
     activeProfileRef.current = userProfile;
   }, [userProfile]);
+
+  useEffect(() => {
+    if (!isConfigured) {
+      return;
+    }
+
+    let mounted = true;
+    void (async () => {
+      try {
+        const templates = await listPlanTemplates();
+        if (!mounted) return;
+        setPlanTemplates(templates);
+        if (templates[0]?.slug) {
+          setSelectedTemplateSlug(templates[0].slug);
+        }
+      } catch {
+        if (!mounted) return;
+        setPlanTemplates([]);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isConfigured]);
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -134,7 +221,9 @@ export default function AuthGate() {
     let isMounted = true;
 
     const updateCaches = (userId, bundle) => {
-      writeSessionCache(PLAN_CACHE_PREFIX, userId, bundle.plan);
+      if (bundle.plan) {
+        writeSessionCache(PLAN_CACHE_PREFIX, userId, bundle.plan);
+      }
       writeSessionCache(PROFILE_CACHE_PREFIX, userId, bundle.profile);
     };
 
@@ -142,6 +231,7 @@ export default function AuthGate() {
       preparePromiseRef.current = null;
       clearSessionCache(PLAN_CACHE_PREFIX, userId);
       clearSessionCache(PROFILE_CACHE_PREFIX, userId);
+      activeUserIdRef.current = null;
       setActivePlan(null);
       setUserProfile(null);
     };
@@ -158,7 +248,7 @@ export default function AuthGate() {
 
       const promise = withTimeout(
         (async () => {
-          const plan = await ensureUserPlan(user);
+          const plan = await ensureUserPlan(user, { autoCreate: false });
           const profile = (await getProfile(user.id)) || (await ensureUserProfile(user));
           return { profile, plan };
         })(),
@@ -180,6 +270,11 @@ export default function AuthGate() {
       setAuthMessage('');
 
       if (isProfileSetupComplete(bundle.profile)) {
+        if (!bundle.plan) {
+          setPlanSetupMessage('');
+          setStage(STAGES.PLAN_SETUP);
+          return;
+        }
         setStage(STAGES.APP);
         return;
       }
@@ -199,19 +294,20 @@ export default function AuthGate() {
 
       const nextUserId = nextSession.user.id;
       const sameUser = activeUserIdRef.current === nextUserId;
+      activeUserIdRef.current = nextUserId;
       const hasLoadedUserData = Boolean(activePlanRef.current) && Boolean(activeProfileRef.current);
       const currentProfileReady = isProfileSetupComplete(activeProfileRef.current);
 
       if (sameUser && hasLoadedUserData && currentProfileReady && event !== 'SIGNED_OUT') {
         try {
           const bundle = await prepareBundle(nextSession.user);
-          if (!isMounted) return;
+          if (!isMounted || activeUserIdRef.current !== nextUserId) return;
           setActivePlan(bundle.plan);
           setUserProfile(bundle.profile);
           updateCaches(nextUserId, bundle);
           setAuthMessage('');
         } catch (error) {
-          if (!isMounted) return;
+          if (!isMounted || activeUserIdRef.current !== nextUserId) return;
           setAuthMessage(error.message || 'Não foi possível atualizar seus dados agora.');
         }
         return;
@@ -220,12 +316,16 @@ export default function AuthGate() {
       const cachedPlan = readSessionCache(PLAN_CACHE_PREFIX, nextUserId);
       const cachedProfile = readSessionCache(PROFILE_CACHE_PREFIX, nextUserId);
 
-      if (cachedPlan && cachedProfile) {
-        setActivePlan(cachedPlan);
+      if (cachedProfile) {
+        setActivePlan(cachedPlan || null);
         setUserProfile(cachedProfile);
 
         if (isProfileSetupComplete(cachedProfile)) {
-          setStage(STAGES.APP);
+          if (cachedPlan) {
+            setStage(STAGES.APP);
+          } else {
+            setStage(STAGES.PLAN_SETUP);
+          }
         } else {
           setProfileSetupMode('required');
           setStage(STAGES.NEEDS_PROFILE_SETUP);
@@ -236,10 +336,10 @@ export default function AuthGate() {
 
       try {
         const bundle = await prepareBundle(nextSession.user);
-        if (!isMounted) return;
+        if (!isMounted || activeUserIdRef.current !== nextUserId) return;
         applyBundle(bundle, nextSession);
       } catch (error) {
-        if (!isMounted) return;
+        if (!isMounted || activeUserIdRef.current !== nextUserId) return;
         setAuthMessage(error.message || 'Não foi possível preparar sua conta.');
         setStage(STAGES.PREPARE_ERROR);
       }
@@ -365,6 +465,8 @@ export default function AuthGate() {
       setSession(null);
       setActivePlan(null);
       setUserProfile(null);
+      setImportedPlanDraft(null);
+      setPlanSetupMessage('');
       setStage(STAGES.ONBOARDING);
       setIsAuthBusy(false);
     }
@@ -387,6 +489,8 @@ export default function AuthGate() {
       setSession(null);
       setActivePlan(null);
       setUserProfile(null);
+      setImportedPlanDraft(null);
+      setPlanSetupMessage('');
       setIsAuthBusy(false);
       setStage(STAGES.ONBOARDING);
     }
@@ -407,7 +511,7 @@ export default function AuthGate() {
       setUserProfile(updatedProfile);
       writeSessionCache(PROFILE_CACHE_PREFIX, session.user.id, updatedProfile);
       setProfileSetupMode('required');
-      setStage(STAGES.APP);
+      setStage(activePlan ? STAGES.APP : STAGES.PLAN_SETUP);
     } catch (error) {
       setAuthMessage(error.message || 'Não foi possível salvar seu nome agora.');
     } finally {
@@ -423,6 +527,78 @@ export default function AuthGate() {
     }
 
     handleResetAuth();
+  };
+
+  const handleCreatePlanFromTemplate = async (templateSlug) => {
+    if (!session?.user) return;
+    setIsAuthBusy(true);
+    setPlanSetupMessage('');
+    setSelectedTemplateSlug(templateSlug);
+
+    try {
+      const nextPlan = await createUserPlanFromTemplate(session.user, templateSlug);
+      setActivePlan(nextPlan);
+      writeSessionCache(PLAN_CACHE_PREFIX, session.user.id, nextPlan);
+      setStage(STAGES.APP);
+    } catch (error) {
+      setPlanSetupMessage(error.message || 'Não foi possível criar o plano padrão agora.');
+    } finally {
+      setIsAuthBusy(false);
+    }
+  };
+
+  const handleImportSvgFile = async (file) => {
+    if (!session?.user) return;
+    setIsAuthBusy(true);
+    setPlanSetupMessage('');
+
+    try {
+      const svgText = await file.text();
+      const parsedPlan = await importPlanFromSvg(session.user.id, svgText);
+      setImportedPlanDraft(parsedPlan);
+      setPlanSetupMessage('Pré-visualização gerada com sucesso. Salve ou publique quando quiser.');
+    } catch (error) {
+      setImportedPlanDraft(null);
+      setPlanSetupMessage(
+        error.message ||
+          'Não conseguimos ler seu SVG neste formato. Escolha um plano padrão e edite depois.'
+      );
+    } finally {
+      setIsAuthBusy(false);
+    }
+  };
+
+  const handleSaveImportedDraft = async () => {
+    if (!session?.user?.id || !importedPlanDraft) return;
+    setIsAuthBusy(true);
+    setPlanSetupMessage('');
+
+    try {
+      await saveUserPlanDraft(session.user.id, importedPlanDraft);
+      setPlanSetupMessage('Rascunho salvo com sucesso.');
+    } catch (error) {
+      setPlanSetupMessage(error.message || 'Não foi possível salvar o rascunho.');
+    } finally {
+      setIsAuthBusy(false);
+    }
+  };
+
+  const handlePublishImportedDraft = async () => {
+    if (!session?.user?.id || !importedPlanDraft) return;
+    setIsAuthBusy(true);
+    setPlanSetupMessage('');
+
+    try {
+      await saveUserPlanDraft(session.user.id, importedPlanDraft);
+      const published = await publishUserPlanDraft(session.user.id);
+      setActivePlan(published);
+      writeSessionCache(PLAN_CACHE_PREFIX, session.user.id, published);
+      setStage(STAGES.APP);
+    } catch (error) {
+      setPlanSetupMessage(error.message || 'Não foi possível publicar o plano agora.');
+    } finally {
+      setIsAuthBusy(false);
+    }
   };
 
   if (stage === STAGES.LOADING_SESSION || stage === STAGES.RESTORING_CACHED_PLAN || stage === STAGES.PREPARING_PROFILE) {
@@ -469,7 +645,7 @@ export default function AuthGate() {
   }
 
   if (stage === STAGES.ONBOARDING) {
-    return <OnboardingScreen onContinue={handleContinueFromOnboarding} />;
+    return <OnboardingScreen onContinue={handleContinueFromOnboarding} isDark={isDark} onToggleTheme={() => setIsDark((value) => !value)} />;
   }
 
   if (stage === STAGES.AUTH || stage === STAGES.AUTH_ERROR) {
@@ -480,6 +656,8 @@ export default function AuthGate() {
         isSupabaseConfigured={isConfigured}
         onBack={handleBackToOnboarding}
         onAuthAction={handleStartAuth}
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((value) => !value)}
       />
     );
   }
@@ -493,6 +671,60 @@ export default function AuthGate() {
         errorMessage={authMessage}
         onBack={handleBackFromProfileSetup}
         onSubmit={handleCompleteProfile}
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((value) => !value)}
+      />
+    );
+  }
+
+  if (stage === STAGES.PLAN_SETUP) {
+    return (
+      <PlanStartScreen
+        isBusy={isAuthBusy}
+        message={planSetupMessage}
+        onBack={handleResetAuth}
+        onSelectImport={() => {
+          setPlanSetupMessage('');
+          setStage(STAGES.PLAN_IMPORT);
+        }}
+        onSelectDefault={() => {
+          setPlanSetupMessage('');
+          setStage(STAGES.PLAN_LEVEL_PICKER);
+        }}
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((value) => !value)}
+      />
+    );
+  }
+
+  if (stage === STAGES.PLAN_LEVEL_PICKER) {
+    return (
+      <PlanLevelPickerScreen
+        templates={planTemplates}
+        selectedSlug={selectedTemplateSlug}
+        isBusy={isAuthBusy}
+        message={planSetupMessage}
+        onBack={() => setStage(STAGES.PLAN_SETUP)}
+        onSelectTemplate={handleCreatePlanFromTemplate}
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((value) => !value)}
+      />
+    );
+  }
+
+  if (stage === STAGES.PLAN_IMPORT) {
+    return (
+      <PlanImportScreen
+        parsedPlan={importedPlanDraft}
+        isBusy={isAuthBusy}
+        errorMessage={planSetupMessage && !importedPlanDraft ? planSetupMessage : ''}
+        successMessage={planSetupMessage && importedPlanDraft ? planSetupMessage : ''}
+        onBack={() => setStage(STAGES.PLAN_SETUP)}
+        onFileSelected={handleImportSvgFile}
+        onSaveDraft={handleSaveImportedDraft}
+        onPublish={handlePublishImportedDraft}
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((value) => !value)}
       />
     );
   }

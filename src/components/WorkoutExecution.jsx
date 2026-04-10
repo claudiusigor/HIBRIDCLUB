@@ -14,7 +14,7 @@ export default function WorkoutExecution({ workout, onClose }) {
     return (
       <div className="min-h-screen bg-light-bg dark:bg-dark-bg flex items-center justify-center p-6">
         <button onClick={onClose} className="font-semibold text-[#0A3CFF] dark:text-[#8FB1FF]">
-          Nenhum exercicio. Voltar.
+          Nenhum exercício. Voltar.
         </button>
       </div>
     );
@@ -37,7 +37,7 @@ export default function WorkoutExecution({ workout, onClose }) {
       });
 
       if (!didSave) {
-        setSaveError('Nao foi possivel salvar agora. Tente novamente.');
+        setSaveError('Não foi possível salvar agora. Tente novamente.');
         return;
       }
     }
@@ -102,7 +102,7 @@ export default function WorkoutExecution({ workout, onClose }) {
               </div>
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.22em] text-[#0A3CFF] dark:text-[#8FB1FF]">
-                  {isCardio ? 'Distancia (km)' : 'Repeticoes'}
+                  {isCardio ? 'Distância (km)' : 'Repetições'}
                 </label>
                 <input
                   type="number"
@@ -120,7 +120,7 @@ export default function WorkoutExecution({ workout, onClose }) {
               style={{ backgroundColor: PRIMARY_BLUE }}
               className="w-full rounded-2xl px-4 py-3 text-[15px] font-bold uppercase tracking-[0.18em] text-white shadow-[0_16px_30px_rgba(10,60,255,0.28)] transition-all active:scale-[0.98] hover:brightness-110"
             >
-              {isLast ? 'Concluir treino' : 'Salvar e proximo'}
+              {isLast ? 'Concluir treino' : 'Salvar e próximo'}
             </button>
             {saveError && <p className="mt-3 text-center text-[13px] font-medium text-rose-600 dark:text-rose-300">{saveError}</p>}
           </div>

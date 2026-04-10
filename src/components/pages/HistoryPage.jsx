@@ -67,8 +67,23 @@ export default function HistoryPage({ plan = workoutPlan }) {
 
     loadHistory();
 
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void loadHistory();
+      }
+    };
+
+    const handleFocus = () => {
+      void loadHistory();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -113,20 +128,24 @@ export default function HistoryPage({ plan = workoutPlan }) {
   }, [currentMonthWorkoutKeys, selectedDateKey, visibleMonth]);
 
   const selectedLog = history[selectedDateKey];
+  const selectedNutrition = {
+    water: Number(selectedLog?.nutrition?.water) || 0,
+    calories: Number(selectedLog?.nutrition?.calories) || 0,
+  };
   const selectedSessions = getWorkoutSessions(selectedLog);
   const hasSelectedWorkout = selectedSessions.length > 0;
 
   return (
     <div>
       <header className="mb-5">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Sessoes salvas</p>
-        <h2 className="mt-1 text-[32px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">Historico</h2>
+        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Sessões salvas</p>
+        <h2 className="mt-1 text-[32px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">Histórico</h2>
       </header>
 
       {storageError && (
         <div className="mb-4 flex items-start gap-2 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-          <p className="text-[13px] leading-relaxed">Falha ao carregar parte do historico agora. Tente atualizar em instantes.</p>
+          <p className="text-[13px] leading-relaxed">Falha ao carregar parte do histórico agora. Tente atualizar em instantes.</p>
         </div>
       )}
 
@@ -139,21 +158,21 @@ export default function HistoryPage({ plan = workoutPlan }) {
             </h3>
             <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
               {currentMonthWorkoutKeys.length > 0
-                ? `${currentMonthWorkoutKeys.length} dia${currentMonthWorkoutKeys.length > 1 ? 's' : ''} com treino neste mes`
-                : 'Nenhum treino salvo neste mes'}
+                ? `${currentMonthWorkoutKeys.length} dia${currentMonthWorkoutKeys.length > 1 ? 's' : ''} com treino neste mês`
+                : 'Nenhum treino salvo neste mês'}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
-              aria-label="Mes anterior"
+              aria-label="Mês anterior"
               className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3F6FC] text-[#0A3CFF] transition-colors hover:bg-[#E7EEFF] dark:bg-white/[0.08] dark:text-[#AFC5FF]"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={() => setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
-              aria-label="Proximo mes"
+              aria-label="Próximo mês"
               className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3F6FC] text-[#0A3CFF] transition-colors hover:bg-[#E7EEFF] dark:bg-white/[0.08] dark:text-[#AFC5FF]"
             >
               <ChevronRight size={18} />
@@ -212,9 +231,21 @@ export default function HistoryPage({ plan = workoutPlan }) {
             <p className="text-[15px] font-semibold text-gray-500 dark:text-gray-400">Nenhum treino salvo neste dia.</p>
             <p className="mt-2 text-[13px] text-gray-400 dark:text-gray-500">
               {selectedLog?.nutrition?.water || selectedLog?.nutrition?.calories
-                ? 'Ha registro de nutricao nesta data, mas sem sessao de treino salva.'
+                ? 'Há registro de nutrição nesta data, mas sem sessão de treino salva.'
                 : 'Toque em outro dia marcado para ver os detalhes do treino.'}
             </p>
+            {(selectedNutrition.water > 0 || selectedNutrition.calories > 0) && (
+              <div className="mt-5 grid grid-cols-2 gap-3 text-left">
+                <div className="rounded-[16px] border border-black/[0.05] bg-[#F7F9FD] px-3 py-3 dark:border-white/[0.08] dark:bg-white/[0.04]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Água</p>
+                  <p className="mt-1 text-[18px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{selectedNutrition.water} ml</p>
+                </div>
+                <div className="rounded-[16px] border border-black/[0.05] bg-[#F7F9FD] px-3 py-3 dark:border-white/[0.08] dark:bg-white/[0.04]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Calorias</p>
+                  <p className="mt-1 text-[18px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{selectedNutrition.calories} kcal</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -236,11 +267,21 @@ export default function HistoryPage({ plan = workoutPlan }) {
                 </div>
                 <div className="text-right">
                   <p className="text-[13px] font-semibold text-gray-700 dark:text-gray-300">
-                    {selectedSessions.length} sessao{selectedSessions.length > 1 ? 'es' : ''}
+                    {selectedSessions.length} sessão{selectedSessions.length > 1 ? 'es' : ''}
                   </p>
                   <p className="mt-1 text-[11px] font-semibold text-[#0A3CFF] dark:text-[#8FB1FF]">
                     {selectedSessions.reduce((total, session) => total + Object.keys(session.exercises || {}).length, 0)} itens salvos
                   </p>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="rounded-[14px] border border-black/[0.05] bg-[#F7F9FD] px-3 py-2.5 text-left dark:border-white/[0.08] dark:bg-white/[0.04]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Água</p>
+                  <p className="mt-1 text-[16px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{selectedNutrition.water} ml</p>
+                </div>
+                <div className="rounded-[14px] border border-black/[0.05] bg-[#F7F9FD] px-3 py-2.5 text-left dark:border-white/[0.08] dark:bg-white/[0.04]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Calorias</p>
+                  <p className="mt-1 text-[16px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{selectedNutrition.calories} kcal</p>
                 </div>
               </div>
             </div>
@@ -248,7 +289,7 @@ export default function HistoryPage({ plan = workoutPlan }) {
             <div className="flex flex-col gap-3 px-3 py-3">
               {selectedSessions.map((session) => {
                 const selectedPlan = plan.schedule[session.workoutId];
-                const sessionTitle = selectedPlan ? selectedPlan.name : `Sessao ${session.workoutId}`;
+                const sessionTitle = selectedPlan ? selectedPlan.name : `Sessão ${session.workoutId}`;
                 const sessionType = selectedPlan ? selectedPlan.type : 'Treino salvo';
 
                 return (
@@ -284,7 +325,7 @@ export default function HistoryPage({ plan = workoutPlan }) {
                                 {exerciseMeta ? exerciseMeta.name : exerciseId}
                               </p>
                               <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">
-                                {normalized.kind === 'cardio' ? 'Cardio registrado' : 'Forca registrada'}
+                                {normalized.kind === 'cardio' ? 'Cardio registrado' : 'Força registrada'}
                               </p>
                             </div>
                             <div className="shrink-0 text-right">

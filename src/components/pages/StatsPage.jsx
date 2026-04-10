@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   CalendarDays,
@@ -222,8 +222,23 @@ export default function StatsPage({ plan = workoutPlan }) {
 
     loadStats();
 
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void loadStats();
+      }
+    };
+
+    const handleFocus = () => {
+      void loadStats();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [plan]);
 
@@ -405,7 +420,7 @@ export default function StatsPage({ plan = workoutPlan }) {
       default:
         return {
           eyebrow: 'Sessões totais',
-          title: `${statsSummary.sessions} sessão${statsSummary.sessions === 1 ? '' : 'ões'} salvas`,
+          title: `${statsSummary.sessions} sessão${statsSummary.sessions === 1 ? '' : 's'} salvas`,
           description: 'Se você salvar A e C no mesmo dia, as duas contam separadamente aqui.',
           items: statsSummary.recentSessions.map((session) => ({
             primary: session.workoutName,
@@ -423,7 +438,7 @@ export default function StatsPage({ plan = workoutPlan }) {
     <div>
       {storageError && (
         <div className="mb-4 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          Alguns dados nao puderam ser sincronizados agora. Tente atualizar em instantes.
+          Alguns dados não puderam ser sincronizados agora. Tente atualizar em instantes.
         </div>
       )}
       <header className="mb-5">
@@ -608,3 +623,4 @@ function InsightCard({ label, value, helper, Icon, isActive, onClick }) {
     </button>
   );
 }
+

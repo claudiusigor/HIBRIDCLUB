@@ -11,8 +11,10 @@ import {
   Droplets,
   CalendarDays,
   ClipboardList,
+  BedDouble,
 } from 'lucide-react';
 import { workoutPlan } from '../data/workoutPlan';
+import { DEFAULT_WEEK_ORDER, getWeekdayKeyFromDate, normalizePlanModel } from '../services/plans';
 import TrainingCard from './ui/TrainingCard';
 import WeightLog from './ui/WeightLog';
 
@@ -26,23 +28,24 @@ const DARK_THEME_COLOR = '#0A0D14';
 const LIGHT_THEME_COLOR = '#F5F7FB';
 
 const TABS = { HOME: 'home', STATS: 'stats', NUTRITION: 'nutrition', HISTORY: 'history', PLAN: 'plan' };
+const WEEKDAY_VIEW = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
+const WEEKDAY_LABELS = {
+  SEG: 'SEG',
+  TER: 'TER',
+  QUA: 'QUA',
+  QUI: 'QUI',
+  SEX: 'SEX',
+  SAB: 'SAB',
+  DOM: 'DOM',
+};
 
 const OBJECTIVE_COPY = {
-  A: 'Priorize carga, controle e potência nas pernas.',
+  A: 'Priorize carga, controle e potencia nas pernas.',
   B: 'Empurre forte e estabilize o tronco no puxar.',
   C: 'Sustente o ritmo e firme o core a cada bloco.',
   D: 'Ative posteriores e glúteos com execução sólida.',
   E: 'Construa costas fortes e ombros estáveis no volume.',
   F: 'Mantenha constância, respiração e pace confortável.',
-};
-
-const TODAY_WORKOUT_BY_WEEKDAY = {
-  1: 'A',
-  2: 'B',
-  3: 'C',
-  4: 'D',
-  5: 'E',
-  6: 'F',
 };
 
 const DOCK_ITEMS = [
@@ -55,11 +58,9 @@ const DOCK_ITEMS = [
 
 function getInitialTheme() {
   if (typeof window === 'undefined') return true;
-
   const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
   if (savedTheme === 'light') return false;
   if (savedTheme === 'dark') return true;
-
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
@@ -69,30 +70,61 @@ function getDisplayName(userProfile, user) {
 
 function getGreeting(name) {
   const hour = new Date().getHours();
-
-  if (hour < 12) {
-    return `Bom dia, ${name}`;
-  }
-
-  if (hour < 18) {
-    return `Boa tarde, ${name}`;
-  }
-
+  if (hour < 12) return `Bom dia, ${name}`;
+  if (hour < 18) return `Boa tarde, ${name}`;
   return `Boa noite, ${name}`;
 }
 
 export default function Dashboard({ plan = workoutPlan, user, userProfile, onEditProfile, onSignOut }) {
+  const [currentPlan, setCurrentPlan] = useState(() => normalizePlanModel(plan));
   const [activeTab, setActiveTab] = useState(TABS.HOME);
-  const [selectedDay, setSelectedDay] = useState('A');
+  const [selectedWeekday, setSelectedWeekday] = useState(() => {
+    const todayKey = getWeekdayKeyFromDate();
+    return todayKey;
+  });
   const [isExecuting, setIsExecuting] = useState(false);
   const [isDark, setIsDark] = useState(getInitialTheme);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallAvailable, setIsInstallAvailable] = useState(false);
 
   useEffect(() => {
+    setCurrentPlan(normalizePlanModel(plan));
+  }, [plan]);
+
+  useEffect(() => {
+    const todayKey = getWeekdayKeyFromDate();
+    setSelectedWeekday(todayKey);
+  }, [currentPlan.weekOrder]);
+
+  useEffect(() => {
+    if (activeTab !== TABS.HOME) return;
+    setSelectedWeekday(getWeekdayKeyFromDate());
+  }, [activeTab]);
+
+  useEffect(() => {
+    const syncTodayOnHome = () => {
+      if (activeTab !== TABS.HOME) return;
+      setSelectedWeekday(getWeekdayKeyFromDate());
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        syncTodayOnHome();
+      }
+    };
+
+    window.addEventListener('focus', syncTodayOnHome);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', syncTodayOnHome);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
     window.localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
-
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (themeColorMeta) {
       themeColorMeta.setAttribute('content', isDark ? DARK_THEME_COLOR : LIGHT_THEME_COLOR);
@@ -101,7 +133,6 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
     const handleSystemThemeChange = (event) => {
       const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
       if (!savedTheme) {
@@ -130,7 +161,6 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
       setDeferredPrompt(event);
       setIsInstallAvailable(true);
     };
-
     const handleAppInstalled = () => {
       setDeferredPrompt(null);
       setIsInstallAvailable(false);
@@ -138,7 +168,6 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
@@ -147,37 +176,37 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
-
     deferredPrompt.prompt();
     await deferredPrompt.userChoice;
     setDeferredPrompt(null);
     setIsInstallAvailable(false);
   };
 
-  const activeWorkout = plan.schedule[selectedDay];
-  const days = Object.values(plan.schedule);
-  const todayWorkoutId = TODAY_WORKOUT_BY_WEEKDAY[new Date().getDay()] || null;
+  const weekOrder = currentPlan.weekOrder || DEFAULT_WEEK_ORDER;
+  const selectedWorkoutId = weekOrder[selectedWeekday] || null;
+  const activeWorkout = selectedWorkoutId ? currentPlan.schedule[selectedWorkoutId] : null;
+  const todayWeekdayKey = getWeekdayKeyFromDate();
   const greeting = getGreeting(getDisplayName(userProfile, user));
 
+  const daySlots = WEEKDAY_VIEW.map((weekdayKey) => {
+    const workoutId = weekOrder[weekdayKey] || null;
+    return {
+      weekdayKey,
+      label: WEEKDAY_LABELS[weekdayKey],
+      workoutId,
+      workout: workoutId ? currentPlan.schedule[workoutId] : null,
+    };
+  });
+
   const currentTabContent = useMemo(() => {
-    if (activeTab === TABS.STATS) {
-      return <StatsPage plan={plan} />;
-    }
-
-    if (activeTab === TABS.NUTRITION) {
-      return <NutritionPage plan={plan} />;
-    }
-
-    if (activeTab === TABS.HISTORY) {
-      return <HistoryPage plan={plan} />;
-    }
-
+    if (activeTab === TABS.STATS) return <StatsPage plan={currentPlan} />;
+    if (activeTab === TABS.NUTRITION) return <NutritionPage plan={currentPlan} />;
+    if (activeTab === TABS.HISTORY) return <HistoryPage plan={currentPlan} />;
     if (activeTab === TABS.PLAN) {
-      return <PlanPage plan={plan} />;
+      return <PlanPage plan={currentPlan} userId={user?.id} onPlanUpdated={(nextPlan) => setCurrentPlan(normalizePlanModel(nextPlan))} />;
     }
-
     return null;
-  }, [activeTab, plan]);
+  }, [activeTab, currentPlan, user?.id]);
 
   if (isExecuting) {
     return (
@@ -227,9 +256,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
         {activeTab === TABS.HOME && (
           <>
             <div className="mb-2 flex items-center justify-between px-1">
-              <p className="text-[12px] font-medium tracking-[-0.01em] text-gray-500 dark:text-gray-400">
-                {greeting}
-              </p>
+              <p className="text-[12px] font-medium tracking-[-0.01em] text-gray-500 dark:text-gray-400">{greeting}</p>
               {onEditProfile && (
                 <button
                   onClick={onEditProfile}
@@ -241,68 +268,67 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
               )}
             </div>
             <div className="rounded-[26px] bg-black/[0.04] p-1.5 dark:bg-white/[0.06]">
-            <div className="grid grid-cols-6 gap-1.5">
-              {days.map((workoutDay) => {
-                const isActive = selectedDay === workoutDay.id;
-                const isCardioDay = workoutDay.type === 'Cardio';
-                const isTodayCard = todayWorkoutId === workoutDay.id;
+              <div className="grid grid-cols-7 gap-1.5">
+                {daySlots.map((slot) => {
+                  const isActive = selectedWeekday === slot.weekdayKey;
+                  const isCardioDay = slot.workout?.type === 'Cardio';
+                  const isTodayCard = todayWeekdayKey === slot.weekdayKey;
+                  const isRestDay = !slot.workout;
 
-                return (
-                  <button
-                    key={workoutDay.id}
-                    onClick={() => setSelectedDay(workoutDay.id)}
-                    className={`flex min-h-[72px] flex-col items-center justify-center rounded-[22px] px-1.5 py-2 transition-all duration-300 ${
-                      isActive
-                        ? 'bg-white text-[#0A3CFF] shadow-[0_10px_22px_rgba(10,60,255,0.14)] dark:bg-[#0A3CFF] dark:text-white'
-                        : isTodayCard
-                          ? 'text-gray-600 dark:text-gray-300'
-                          : 'text-gray-500 dark:text-gray-400'
-                    }`}
-                  >
-                    <span
-                      className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                        isActive ? 'opacity-80' : isTodayCard ? 'text-[#0A3CFF] dark:text-[#AFC5FF]' : 'opacity-70'
+                  return (
+                    <button
+                      key={slot.weekdayKey}
+                      onClick={() => setSelectedWeekday(slot.weekdayKey)}
+                      className={`flex min-h-[72px] flex-col items-center justify-center rounded-[22px] px-1.5 py-2 transition-all duration-300 ${
+                        isActive
+                          ? 'bg-white text-[#0A3CFF] shadow-[0_10px_22px_rgba(10,60,255,0.14)] dark:bg-[#0A3CFF] dark:text-white'
+                          : isTodayCard
+                            ? 'text-gray-600 dark:text-gray-300'
+                            : 'text-gray-500 dark:text-gray-400'
                       }`}
                     >
-                      {workoutDay.day.substring(0, 3)}
-                    </span>
-                    <span className={`mt-1 text-[18px] font-bold leading-none ${isTodayCard && !isActive ? 'text-gray-950 dark:text-white' : ''}`}>
-                      {workoutDay.id}
-                    </span>
-                    <span className="mt-1 flex h-5 items-center justify-center">
-                      {isCardioDay ? (
-                        <img
-                          src={`${import.meta.env.BASE_URL}icontenis3.png?v=4`}
-                          alt=""
-                          aria-hidden="true"
-                          loading="lazy"
-                          decoding="async"
-                          width="80"
-                          height="80"
-                          className={`h-10 w-10 object-contain ${
-                            isActive
-                              ? isDark
-                                ? 'brightness-0 invert'
-                                : 'opacity-100'
-                              : 'opacity-70 dark:opacity-85'
-                          }`}
-                        />
-                      ) : (
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            isActive
-                              ? 'bg-[#0A3CFF]/45 dark:bg-white/60'
-                              : isTodayCard
-                                ? 'bg-[#0A3CFF] dark:bg-[#AFC5FF]'
-                                : 'bg-gray-300 dark:bg-white/20'
-                          }`}
-                        />
-                      )}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                      <span
+                        className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                          isActive ? 'opacity-80' : isTodayCard ? 'text-[#0A3CFF] dark:text-[#AFC5FF]' : 'opacity-70'
+                        }`}
+                      >
+                        {slot.label}
+                      </span>
+                      <span className={`mt-1 text-[18px] font-bold leading-none ${isTodayCard && !isActive ? 'text-gray-950 dark:text-white' : ''}`}>
+                        {slot.workoutId || '•'}
+                      </span>
+                      <span className="mt-1 flex h-5 items-center justify-center">
+                        {isRestDay ? (
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">off</span>
+                        ) : isCardioDay ? (
+                          <img
+                            src={`${import.meta.env.BASE_URL}icontenis3.png?v=4`}
+                            alt=""
+                            aria-hidden="true"
+                            loading="lazy"
+                            decoding="async"
+                            width="80"
+                            height="80"
+                            className={`h-10 w-10 object-contain ${
+                              isActive ? (isDark ? 'brightness-0 invert' : 'opacity-100') : 'opacity-70 dark:opacity-85'
+                            }`}
+                          />
+                        ) : (
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              isActive
+                                ? 'bg-[#0A3CFF]/45 dark:bg-white/60'
+                                : isTodayCard
+                                  ? 'bg-[#0A3CFF] dark:bg-[#AFC5FF]'
+                                  : 'bg-gray-300 dark:bg-white/20'
+                            }`}
+                          />
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </>
         )}
@@ -315,15 +341,11 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
             onInstall={handleInstall}
             onStartWorkout={() => setIsExecuting(true)}
             isInstallAvailable={isInstallAvailable}
-            selectedDay={selectedDay}
+            selectedWorkoutId={selectedWorkoutId}
           />
         )}
 
-        {activeTab !== TABS.HOME && (
-          <Suspense fallback={<PageFallback label="Carregando tela" />}>
-            {currentTabContent}
-          </Suspense>
-        )}
+        {activeTab !== TABS.HOME && <Suspense fallback={<PageFallback label="Carregando tela" />}>{currentTabContent}</Suspense>}
       </div>
 
       <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2">
@@ -331,7 +353,6 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
           <div className="grid grid-cols-5 gap-1">
             {DOCK_ITEMS.map((item) => {
               const isActive = activeTab === item.id;
-
               return (
                 <button
                   key={item.id}
@@ -341,16 +362,8 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                     isActive ? 'bg-[#0A3CFF] text-white shadow-[0_12px_28px_rgba(10,60,255,0.28)]' : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
-                  <item.Icon
-                    size={item.iconSize}
-                    strokeWidth={1.9}
-                    className={`transition-colors duration-200 ${
-                      isActive ? 'text-white' : 'text-[#546173] dark:text-[#9AA7BC]'
-                    }`}
-                  />
-                  <span className={`mt-1 text-[11px] font-semibold tracking-[-0.01em] ${isActive ? 'text-white/92' : ''}`}>
-                    {item.label}
-                  </span>
+                  <item.Icon size={item.iconSize} strokeWidth={1.9} className={`${isActive ? 'text-white' : 'text-[#546173] dark:text-[#9AA7BC]'}`} />
+                  <span className={`mt-1 text-[11px] font-semibold tracking-[-0.01em] ${isActive ? 'text-white/92' : ''}`}>{item.label}</span>
                 </button>
               );
             })}
@@ -369,7 +382,7 @@ function PageFallback({ label }) {
   );
 }
 
-function HomeContent({ activeWorkout, onInstall, onStartWorkout, isInstallAvailable, selectedDay }) {
+function HomeContent({ activeWorkout, onInstall, onStartWorkout, isInstallAvailable, selectedWorkoutId }) {
   return (
     <>
       {isInstallAvailable && (
@@ -391,7 +404,7 @@ function HomeContent({ activeWorkout, onInstall, onStartWorkout, isInstallAvaila
               />
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0A3CFF] dark:text-[#AFC5FF]">Instalar app</p>
-                <p className="mt-1 text-[15px] font-semibold text-gray-950 dark:text-white">Adicionar o Hibrid Club à tela inicial</p>
+                <p className="mt-1 text-[15px] font-semibold text-gray-950 dark:text-white">Adicionar o Hibrid Club a tela inicial</p>
               </div>
             </div>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0A3CFF] text-white shadow-[0_12px_24px_rgba(10,60,255,0.24)]">
@@ -405,7 +418,19 @@ function HomeContent({ activeWorkout, onInstall, onStartWorkout, isInstallAvaila
         <div className="mb-3">
           <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0A3CFF] dark:text-[#8FB1FF]">Plano do dia</p>
         </div>
-        <TrainingCard workout={activeWorkout} onStart={onStartWorkout} />
+        {activeWorkout ? (
+          <TrainingCard workout={activeWorkout} onStart={onStartWorkout} />
+        ) : (
+          <div className="rounded-[28px] border border-black/[0.05] bg-white px-5 py-6 text-center shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
+              <BedDouble size={20} />
+            </div>
+            <p className="mt-3 text-[20px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">Dia de descanso</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
+              Aproveite para recuperar, hidratar e preparar o próximo bloco.
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="mb-6">
@@ -417,13 +442,16 @@ function HomeContent({ activeWorkout, onInstall, onStartWorkout, isInstallAvaila
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Objetivo principal</p>
               <p className="mt-2 text-[30px] font-bold leading-[1.02] tracking-[-0.05em] text-gray-950 dark:text-white">
-                {activeWorkout?.type}
+                {activeWorkout?.type || 'Recuperacao'}
               </p>
             </div>
           </div>
           <div className="border-t border-black/[0.05] px-5 py-3 dark:border-white/[0.06]">
             <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-400">
-              {OBJECTIVE_COPY[selectedDay] || 'Mantenha consistência e boa execução em cada série.'}
+              {OBJECTIVE_COPY[selectedWorkoutId] ||
+                (activeWorkout
+                  ? 'Mantenha consistência e boa execução em cada série.'
+                  : 'Dia leve para recuperar e manter consistência.')}
             </p>
           </div>
         </div>
@@ -432,11 +460,17 @@ function HomeContent({ activeWorkout, onInstall, onStartWorkout, isInstallAvaila
       <section>
         <div className="mb-3 flex items-end justify-between">
           <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Registro rápido</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Registro rapido</p>
             <h3 className="mt-1 text-[22px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">Treino diário</h3>
           </div>
         </div>
-        <WeightLog exercises={activeWorkout?.exercises || []} workoutId={selectedDay} />
+        {activeWorkout ? (
+          <WeightLog exercises={activeWorkout.exercises || []} workoutId={selectedWorkoutId || 'REST'} />
+        ) : (
+          <div className="rounded-[20px] border border-black/[0.05] bg-white px-4 py-5 text-center text-[13px] text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400">
+            Sem treino atribuído para este dia.
+          </div>
+        )}
       </section>
     </>
   );

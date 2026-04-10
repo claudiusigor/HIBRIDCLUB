@@ -1,5 +1,5 @@
-﻿import React, { useState } from 'react';
-import { ArrowLeft, Check, Moon, Sun } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Check, PencilLine } from 'lucide-react';
 import Iridescence from '../effects/Iridescence';
 
 export default function ProfileSetupScreen({
@@ -9,8 +9,6 @@ export default function ProfileSetupScreen({
   errorMessage,
   onBack,
   onSubmit,
-  isDark,
-  onToggleTheme,
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName || '');
 
@@ -31,13 +29,6 @@ export default function ProfileSetupScreen({
         />
       </div>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.45),transparent_34%),linear-gradient(180deg,rgba(245,247,251,0.4),rgba(245,247,251,0.18)_38%,rgba(245,247,251,0.84))] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_30%),linear-gradient(180deg,rgba(10,13,20,0.18),rgba(10,13,20,0.18)_38%,rgba(10,13,20,0.74))]" />
-      <button
-        onClick={onToggleTheme}
-        aria-label={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
-        className="absolute right-6 top-8 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-colors dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
-      >
-        {isDark ? <Sun size={17} /> : <Moon size={17} />}
-      </button>
 
       <div className="relative mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-sm flex-col">
         <button
@@ -58,9 +49,15 @@ export default function ProfileSetupScreen({
               className="h-auto max-h-[92px] w-auto object-contain"
             />
           </div>
+          <p className="hidden">
+            
+          </p>
           <h1 className="mt-6 text-[34px] font-black tracking-[-0.05em] text-gray-950 dark:text-white">
             Como você gostaria de ser chamado?
           </h1>
+          <p className="hidden">
+            Vamos usar esse nome na sua experiência dentro do app, no plano do dia e nos estados vazios.
+          </p>
         </div>
 
         <form
@@ -68,6 +65,9 @@ export default function ProfileSetupScreen({
           className="mt-10 rounded-[30px] border border-black/[0.05] bg-white/76 p-4 shadow-[0_20px_44px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-[0_20px_44px_rgba(0,0,0,0.3)]"
         >
           <div className="rounded-[22px] border border-black/[0.06] bg-[#F7F9FD] p-3 dark:border-white/[0.08] dark:bg-[#0D121C]">
+            <label className="hidden">
+              Nome exibido no app
+            </label>
             <div className="relative">
               <input
                 type="text"
@@ -85,7 +85,14 @@ export default function ProfileSetupScreen({
                 <Check size={16} />
               </button>
             </div>
+            <p className="hidden">
+              Conta conectada: <span className="font-semibold text-gray-700 dark:text-gray-200">{_email}</span>
+            </p>
           </div>
+
+          <button type="submit" disabled={isBusy} className="hidden">
+            {isBusy ? 'Salvando nome...' : 'Entrar no app'}
+          </button>
 
           <div className="mt-4 min-h-[24px]">
             {errorMessage ? (
@@ -93,6 +100,10 @@ export default function ProfileSetupScreen({
                 {errorMessage}
               </p>
             ) : null}
+              
+                Você pode mudar esse nome depois sem alterar sua ficha.
+              </p>
+            )}
           </div>
         </form>
       </div>

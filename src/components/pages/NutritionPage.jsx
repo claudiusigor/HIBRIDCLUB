@@ -53,7 +53,7 @@ export default function NutritionPage({ plan = workoutPlan }) {
     <div>
       <header className="mb-5">
         <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Consumo do dia</p>
-        <h2 className="mt-1 text-[32px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">Nutricao</h2>
+        <h2 className="mt-1 text-[32px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">Nutrição</h2>
       </header>
 
       {storageError && (
@@ -65,7 +65,7 @@ export default function NutritionPage({ plan = workoutPlan }) {
 
       <div className="mb-4 grid grid-cols-2 gap-3">
         <div className="rounded-[24px] border border-black/[0.05] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400">Agua</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400">Água</p>
           <p className="mt-2 text-[28px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">{(data.water / 1000).toFixed(1)}L</p>
         </div>
         <div className="rounded-[24px] border border-black/[0.05] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
@@ -82,7 +82,7 @@ export default function NutritionPage({ plan = workoutPlan }) {
                 <Droplets size={22} />
               </div>
               <div>
-                <p className="text-[17px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">Hidratacao</p>
+                <p className="text-[17px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">Hidratação</p>
                 <p className="text-[13px] text-gray-500 dark:text-gray-400">Meta de {targetWater / 1000}L hoje</p>
               </div>
             </div>
@@ -112,7 +112,7 @@ export default function NutritionPage({ plan = workoutPlan }) {
               <div>
                 <p className="text-[17px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">Calorias</p>
                 <p className="text-[13px] text-gray-500 dark:text-gray-400">
-                  Alvo diario {calorieRange.min}-{calorieRange.max} kcal
+                  Alvo diário {calorieRange.min}-{calorieRange.max} kcal
                 </p>
               </div>
             </div>

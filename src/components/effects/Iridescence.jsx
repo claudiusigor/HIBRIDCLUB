@@ -56,6 +56,8 @@ export default function Iridescence({
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return undefined;
 
     const container = containerRef.current;
     const renderer = new Renderer({ alpha: true, antialias: true });
@@ -119,24 +121,45 @@ export default function Iridescence({
     };
 
     const animate = (time) => {
-      frameId = window.requestAnimationFrame(animate);
       program.uniforms.uTime.value = time * 0.001;
       renderer.render({ scene: mesh });
+      frameId = window.requestAnimationFrame(animate);
+    };
+
+    const startAnimation = () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(animate);
+    };
+
+    const stopAnimation = () => {
+      if (!frameId) return;
+      window.cancelAnimationFrame(frameId);
+      frameId = null;
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopAnimation();
+      } else {
+        startAnimation();
+      }
     };
 
     resize();
     window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     if (mouseReact) {
       container.addEventListener('mousemove', handleMouseMove);
       container.addEventListener('touchmove', handleTouchMove, { passive: true });
     }
 
     container.appendChild(gl.canvas);
-    frameId = window.requestAnimationFrame(animate);
+    startAnimation();
 
     return () => {
-      window.cancelAnimationFrame(frameId);
+      stopAnimation();
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (mouseReact) {
         container.removeEventListener('mousemove', handleMouseMove);
         container.removeEventListener('touchmove', handleTouchMove);

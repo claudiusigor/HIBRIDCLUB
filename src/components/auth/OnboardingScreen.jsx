@@ -1,8 +1,8 @@
 import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Moon, Sun } from 'lucide-react';
 import Iridescence from '../effects/Iridescence';
 
-export default function OnboardingScreen({ onContinue }) {
+export default function OnboardingScreen({ onContinue, isDark, onToggleTheme }) {
   return (
     <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#F5F7FB] px-6 pb-[calc(env(safe-area-inset-bottom)+1.75rem)] pt-8 text-gray-900 dark:bg-[#0A0D14] dark:text-white">
       <div className="absolute inset-0">
@@ -15,9 +15,17 @@ export default function OnboardingScreen({ onContinue }) {
         />
       </div>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.42),transparent_34%),linear-gradient(180deg,rgba(245,247,251,0.42),rgba(245,247,251,0.18)_38%,rgba(245,247,251,0.82))] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_30%),linear-gradient(180deg,rgba(10,13,20,0.18),rgba(10,13,20,0.18)_38%,rgba(10,13,20,0.72))]" />
+      <button
+        onClick={onToggleTheme}
+        aria-label={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
+        className="absolute right-6 top-8 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-colors dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
+      >
+        {isDark ? <Sun size={17} /> : <Moon size={17} />}
+      </button>
       <div className="relative mx-auto flex w-full max-w-sm flex-1 flex-col">
         <div className="flex flex-1 items-center justify-center">
           <div className="flex w-full flex-col items-center justify-center">
+            <p className="mb-2 text-[13px] font-light tracking-[0.01em] text-gray-500 dark:text-gray-400">Bem-vindo ao</p>
             <div className="relative flex items-center justify-center">
               <img
                 src={`${import.meta.env.BASE_URL}HYBRIDCLUBBANNER.png`}

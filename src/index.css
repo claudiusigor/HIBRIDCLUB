@@ -32,6 +32,7 @@
 
   #root {
     isolation: isolate;
+    position: relative;
   }
 }
 

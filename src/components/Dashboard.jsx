@@ -124,16 +124,21 @@ export default function Dashboard() {
 
   return (
     <div
-      className="min-h-[100dvh] bg-[#F5F7FB] text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white"
+      className="relative min-h-[100dvh] overflow-x-hidden bg-[#F5F7FB] text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white"
       style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
     >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 overflow-hidden">
+        <div className="absolute left-1/2 top-[-88px] h-40 w-[92vw] max-w-[420px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(10,60,255,0.14),rgba(10,60,255,0.04)_48%,transparent_74%)] blur-2xl dark:bg-[radial-gradient(circle_at_center,rgba(72,123,255,0.28),rgba(72,123,255,0.08)_48%,transparent_76%)]" />
+        <div className="absolute inset-x-5 top-[calc(env(safe-area-inset-top,0px)+6px)] h-px bg-gradient-to-r from-transparent via-black/10 to-transparent dark:via-white/12" />
+      </div>
+
       <header
-        className="sticky top-0 z-40 border-b border-black/[0.04] bg-[#F5F7FB]/88 px-5 pb-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[#0A0D14]/84"
-        style={{ paddingTop: 'calc(0.875rem + env(safe-area-inset-top, 0px))' }}
+        className="sticky top-0 z-40 border-b border-black/[0.04] bg-[linear-gradient(180deg,rgba(245,247,251,0.98)_0%,rgba(245,247,251,0.92)_62%,rgba(245,247,251,0.78)_100%)] px-5 pb-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[linear-gradient(180deg,rgba(10,13,20,0.99)_0%,rgba(10,13,20,0.93)_62%,rgba(10,13,20,0.8)_100%)]"
+        style={{ paddingTop: 'calc(0.45rem + env(safe-area-inset-top, 0px))' }}
       >
-        <div className="mb-4.5 grid grid-cols-[44px_1fr_44px] items-center">
+        <div className="mb-3 grid grid-cols-[44px_1fr_44px] items-start">
           <div />
-          <div className="flex justify-center">
+          <div className="flex justify-center pt-0.5">
             <img
               src={`${import.meta.env.BASE_URL}HYBRIDCLUBBANNER.png`}
               alt="Hybrid Club"
@@ -141,7 +146,7 @@ export default function Dashboard() {
               decoding="async"
               width="320"
               height="214"
-              className="h-auto max-h-[72px] w-auto object-contain sm:max-h-[84px]"
+              className="h-auto max-h-[78px] w-auto object-contain sm:max-h-[88px]"
             />
           </div>
           <button

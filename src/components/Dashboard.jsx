@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
   Sun,
   Moon,
@@ -13,11 +13,12 @@ import {
 import { workoutPlan } from '../data/workoutPlan';
 import TrainingCard from './ui/TrainingCard';
 import WeightLog from './ui/WeightLog';
-import HistoryPage from './pages/HistoryPage';
-import StatsPage from './pages/StatsPage';
-import NutritionPage from './pages/NutritionPage';
-import PlanPage from './pages/PlanPage';
-import WorkoutExecution from './WorkoutExecution';
+
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+const StatsPage = lazy(() => import('./pages/StatsPage'));
+const NutritionPage = lazy(() => import('./pages/NutritionPage'));
+const PlanPage = lazy(() => import('./pages/PlanPage'));
+const WorkoutExecution = lazy(() => import('./WorkoutExecution'));
 
 const TABS = { HOME: 'home', STATS: 'stats', NUTRITION: 'nutrition', HISTORY: 'history', PLAN: 'plan' };
 
@@ -93,8 +94,32 @@ export default function Dashboard() {
   const days = Object.values(workoutPlan.schedule);
   const todayWorkoutId = TODAY_WORKOUT_BY_WEEKDAY[new Date().getDay()] || null;
 
+  const currentTabContent = useMemo(() => {
+    if (activeTab === TABS.STATS) {
+      return <StatsPage />;
+    }
+
+    if (activeTab === TABS.NUTRITION) {
+      return <NutritionPage />;
+    }
+
+    if (activeTab === TABS.HISTORY) {
+      return <HistoryPage />;
+    }
+
+    if (activeTab === TABS.PLAN) {
+      return <PlanPage />;
+    }
+
+    return null;
+  }, [activeTab]);
+
   if (isExecuting) {
-    return <WorkoutExecution workout={activeWorkout} onClose={() => setIsExecuting(false)} />;
+    return (
+      <Suspense fallback={<PageFallback label="Carregando treino" />}>
+        <WorkoutExecution workout={activeWorkout} onClose={() => setIsExecuting(false)} />
+      </Suspense>
+    );
   }
 
   return (
@@ -106,6 +131,10 @@ export default function Dashboard() {
             <img
               src={`${import.meta.env.BASE_URL}HYBRIDCLUBBANNER.png`}
               alt="Hybrid Club"
+              loading="eager"
+              decoding="async"
+              width="320"
+              height="214"
               className="h-auto max-h-[72px] w-auto object-contain sm:max-h-[84px]"
             />
           </div>
@@ -154,6 +183,10 @@ export default function Dashboard() {
                           src={`${import.meta.env.BASE_URL}icontenis3.png?v=4`}
                           alt=""
                           aria-hidden="true"
+                          loading="lazy"
+                          decoding="async"
+                          width="80"
+                          height="80"
                           className={`h-10 w-10 object-contain ${
                             isActive
                               ? isDark
@@ -192,10 +225,12 @@ export default function Dashboard() {
             onInstall={handleInstall}
           />
         )}
-        {activeTab === TABS.STATS && <StatsPage />}
-        {activeTab === TABS.NUTRITION && <NutritionPage />}
-        {activeTab === TABS.HISTORY && <HistoryPage />}
-        {activeTab === TABS.PLAN && <PlanPage />}
+
+        {activeTab !== TABS.HOME && (
+          <Suspense fallback={<PageFallback label="Carregando tela" />}>
+            {currentTabContent}
+          </Suspense>
+        )}
       </div>
 
       <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2">
@@ -233,6 +268,14 @@ export default function Dashboard() {
   );
 }
 
+function PageFallback({ label }) {
+  return (
+    <div className="flex min-h-[220px] items-center justify-center rounded-[28px] border border-black/[0.05] bg-white text-[14px] font-semibold text-gray-500 shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400 dark:shadow-none">
+      {label}
+    </div>
+  );
+}
+
 function HomeContent({ activeWorkout, onStartWorkout, selectedDay, isInstallAvailable, onInstall }) {
   return (
     <>
@@ -243,7 +286,16 @@ function HomeContent({ activeWorkout, onStartWorkout, selectedDay, isInstallAvai
             className="flex w-full items-center justify-between gap-3 overflow-hidden rounded-[26px] border border-[#0A3CFF]/10 bg-white px-4 py-4 text-left shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-transform active:scale-[0.99] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none"
           >
             <div className="flex items-center gap-3">
-              <img src={`${import.meta.env.BASE_URL}iconpwa.png`} alt="" aria-hidden="true" className="h-12 w-12 rounded-[14px] object-cover shadow-[0_8px_18px_rgba(15,23,42,0.14)]" />
+              <img
+                src={`${import.meta.env.BASE_URL}iconpwa.png`}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                decoding="async"
+                width="96"
+                height="96"
+                className="h-12 w-12 rounded-[14px] object-cover shadow-[0_8px_18px_rgba(15,23,42,0.14)]"
+              />
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0A3CFF] dark:text-[#AFC5FF]">Instalar app</p>
                 <p className="mt-1 text-[15px] font-semibold text-gray-950 dark:text-white">Adicionar o Hyperactive à tela inicial</p>

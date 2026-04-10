@@ -1,5 +1,9 @@
 export const STORAGE_KEY = '@hyperactive_logs';
 
+let memoryLogs = null;
+let pendingWriteTimeout = null;
+let flushListenersInstalled = false;
+
 const getLocalDateKey = () => {
   const now = new Date();
   const timezoneOffsetMs = now.getTimezoneOffset() * 60 * 1000;
@@ -93,7 +97,7 @@ const normalizeDayEntry = (entry, dateKey) => {
   return normalized;
 };
 
-const readLogs = () => {
+const parseLogsFromStorage = () => {
   try {
     const existingStr = localStorage.getItem(STORAGE_KEY);
     const parsed = existingStr ? JSON.parse(existingStr) : {};
@@ -107,8 +111,71 @@ const readLogs = () => {
   }
 };
 
+const flushLogsToStorage = () => {
+  if (pendingWriteTimeout) {
+    clearTimeout(pendingWriteTimeout);
+    pendingWriteTimeout = null;
+  }
+
+  if (!memoryLogs) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryLogs));
+  } catch (error) {
+    console.error('Failed to flush logs', error);
+  }
+};
+
+const installFlushListeners = () => {
+  if (flushListenersInstalled || typeof window === 'undefined') {
+    return;
+  }
+
+  const flushOnHide = () => flushLogsToStorage();
+  window.addEventListener('pagehide', flushOnHide);
+  window.addEventListener('beforeunload', flushOnHide);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flushLogsToStorage();
+    }
+  });
+  flushListenersInstalled = true;
+};
+
+const scheduleWrite = () => {
+  if (pendingWriteTimeout) {
+    clearTimeout(pendingWriteTimeout);
+  }
+
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    pendingWriteTimeout = window.setTimeout(() => {
+      window.requestIdleCallback(() => {
+        flushLogsToStorage();
+      });
+    }, 180);
+    return;
+  }
+
+  pendingWriteTimeout = window.setTimeout(() => {
+    flushLogsToStorage();
+  }, 180);
+};
+
+const readLogs = () => {
+  if (memoryLogs) {
+    return memoryLogs;
+  }
+
+  memoryLogs = parseLogsFromStorage();
+  installFlushListeners();
+  return memoryLogs;
+};
+
 const writeLogs = (logs) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+  memoryLogs = logs;
+  scheduleWrite();
 };
 
 export const getWorkoutSessions = (entry) => {

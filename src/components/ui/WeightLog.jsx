@@ -10,26 +10,30 @@ function LogItem({ ex, workoutId }) {
 
   const handleSave = () => {
     if (!val1 || !val2) return;
-    if (isCardio) {
-      saveWorkoutLog(workoutId, ex.id, `${val1} min`, `${val2} km`);
-    } else {
-      saveWorkoutLog(workoutId, ex.id, val1, val2);
-    }
+
+    saveWorkoutLog(workoutId, ex.id, {
+      kind: isCardio ? 'cardio' : 'strength',
+      primary: Number(val1),
+      secondary: Number(val2),
+      primaryUnit: isCardio ? 'min' : 'kg',
+      secondaryUnit: isCardio ? 'km' : 'reps',
+    });
+
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };
 
   return (
-    <div className="relative py-3 border-b border-light-separator dark:border-dark-separator last:border-0">
+    <div className="relative border-b border-light-separator py-3 last:border-0 dark:border-dark-separator">
       {saved && (
-        <div className="absolute inset-0 bg-lime-400 z-10 flex items-center justify-center rounded-xl animate-fade-out">
-          <span className="font-bold text-black text-sm">✓ Salvo</span>
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#0A3CFF] animate-fade-out">
+          <span className="text-sm font-bold text-white">Salvo</span>
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-[14px] font-semibold text-gray-800 dark:text-gray-100 truncate pr-2 flex-1 min-w-0">{ex.name}</span>
-        <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400 bg-light-bg dark:bg-dark-surface px-2 py-0.5 rounded-md shrink-0 ml-2">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="min-w-0 flex-1 truncate pr-2 text-[14px] font-semibold text-gray-800 dark:text-gray-100">{ex.name}</span>
+        <span className="ml-2 shrink-0 rounded-md bg-light-bg px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-dark-surface dark:text-gray-400">
           {isCardio ? ex.target : ex.sets}
         </span>
       </div>
@@ -41,7 +45,7 @@ function LogItem({ ex, workoutId }) {
           placeholder={isCardio ? 'Min' : 'Kg'}
           value={val1}
           onChange={(e) => setVal1(e.target.value)}
-          className="flex-1 min-w-0 h-9 bg-light-bg dark:bg-dark-surface rounded-lg px-2.5 text-[14px] font-semibold text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 outline-none focus:ring-2 ring-lime-400 transition-shadow"
+          className="h-9 min-w-0 flex-1 rounded-lg border border-[#0A3CFF]/10 bg-light-bg px-2.5 text-[14px] font-semibold text-gray-900 outline-none transition-shadow placeholder:text-gray-500 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/10 dark:bg-dark-surface dark:text-white dark:placeholder:text-gray-400"
         />
         <input
           type="number"
@@ -49,11 +53,12 @@ function LogItem({ ex, workoutId }) {
           placeholder={isCardio ? 'Km' : 'Reps'}
           value={val2}
           onChange={(e) => setVal2(e.target.value)}
-          className="flex-1 min-w-0 h-9 bg-light-bg dark:bg-dark-surface rounded-lg px-2.5 text-[14px] font-semibold text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 outline-none focus:ring-2 ring-lime-400 transition-shadow"
+          className="h-9 min-w-0 flex-1 rounded-lg border border-[#0A3CFF]/10 bg-light-bg px-2.5 text-[14px] font-semibold text-gray-900 outline-none transition-shadow placeholder:text-gray-500 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/10 dark:bg-dark-surface dark:text-white dark:placeholder:text-gray-400"
         />
         <button
           onClick={handleSave}
-          className="w-9 h-9 bg-lime-400 rounded-lg flex items-center justify-center text-black shrink-0 active:scale-95 transition-transform"
+          aria-label="Salvar exercício"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0A3CFF] text-white transition-transform active:scale-95"
         >
           <Check size={16} strokeWidth={3} />
         </button>
@@ -69,7 +74,7 @@ export default function WeightLog({ exercises = [], workoutId }) {
   const visible = expanded ? exercises : exercises.slice(0, 3);
 
   return (
-    <div className="glass-card px-3.5 pt-1 pb-2">
+    <div className="glass-card border border-[#0A3CFF]/8 px-3.5 pb-2 pt-1 dark:border-white/10">
       {visible.map((ex) => (
         <LogItem key={ex.id} ex={ex} workoutId={workoutId} />
       ))}
@@ -77,9 +82,9 @@ export default function WeightLog({ exercises = [], workoutId }) {
       {exercises.length > 3 && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full text-center text-[13px] font-bold text-[#0B5ED7] dark:text-lime-400 py-2.5 mt-1 active:opacity-70"
+          className="mt-1 w-full py-2.5 text-center text-[13px] font-bold text-[#0A3CFF] active:opacity-70 dark:text-[#8FB1FF]"
         >
-          {expanded ? 'Ver Menos' : `Ver Todos (${exercises.length})`}
+          {expanded ? 'Ver menos' : `Ver todos (${exercises.length})`}
         </button>
       )}
     </div>

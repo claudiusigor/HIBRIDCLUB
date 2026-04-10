@@ -22,7 +22,10 @@ export default function NutritionPage() {
   const addCalories = () => {
     if (!calInput) return;
     const updated = saveNutritionLog(0, calInput);
-    if (updated) { setData(updated); setCalInput(''); }
+    if (updated) {
+      setData(updated);
+      setCalInput('');
+    }
   };
 
   const waterPct = Math.min((data.water / targetWater) * 100, 100);
@@ -30,72 +33,87 @@ export default function NutritionPage() {
 
   return (
     <div>
-      <h2 className="text-[22px] font-bold mb-5 text-gray-900 dark:text-white">Nutrição</h2>
+      <header className="mb-5">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Consumo do dia</p>
+        <h2 className="mt-1 text-[32px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">Nutrição</h2>
+      </header>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="rounded-[24px] border border-black/[0.05] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400">Água</p>
+          <p className="mt-2 text-[28px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">{(data.water / 1000).toFixed(1)}L</p>
+        </div>
+        <div className="rounded-[24px] border border-black/[0.05] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400">Calorias</p>
+          <p className="mt-2 text-[28px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">{data.calories}</p>
+        </div>
+      </div>
 
       <div className="flex flex-col gap-4">
-        {/* Water */}
-        <div className="glass-card p-5">
-          <div className="flex items-center justify-between mb-4">
+        <section className="overflow-hidden rounded-[28px] border border-black/[0.05] bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+          <div className="mb-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                <Droplets size={20} className="text-cyan-500" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
+                <Droplets size={22} />
               </div>
               <div>
-                <p className="text-[15px] font-bold text-gray-900 dark:text-white">Hidratação</p>
-                <p className="text-[11px] text-gray-600 dark:text-gray-400 font-semibold">Meta: {targetWater / 1000}L</p>
+                <p className="text-[17px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">Hidratação</p>
+                <p className="text-[13px] text-gray-500 dark:text-gray-400">Meta de {targetWater / 1000}L hoje</p>
               </div>
             </div>
-            <p className="text-2xl font-bold text-cyan-500">{(data.water / 1000).toFixed(1)}<span className="text-sm">L</span></p>
+            <p className="text-[20px] font-bold tracking-[-0.03em] text-[#0A3CFF] dark:text-[#AFC5FF]">{Math.round(waterPct)}%</p>
           </div>
 
-          {/* Progress */}
-          <div className="h-2.5 bg-light-bg dark:bg-dark-surface rounded-full overflow-hidden mb-4">
-            <div className="h-full bg-cyan-500 rounded-full transition-all duration-500" style={{ width: `${waterPct}%` }} />
+          <div className="mb-4 h-3 overflow-hidden rounded-full bg-[#E9EEF9] dark:bg-white/[0.08]">
+            <div className="h-full rounded-full bg-[#0A3CFF] transition-all duration-500" style={{ width: `${waterPct}%` }} />
           </div>
 
-          <div className="flex gap-2">
-            <button onClick={() => addWater(250)} className="flex-1 h-10 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform">
-              <Plus size={14} /> 250ml
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => addWater(250)} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#F4F7FF] text-[14px] font-semibold text-[#0A3CFF] transition-transform active:scale-[0.98] dark:bg-[#0A3CFF]/15 dark:text-[#AFC5FF]">
+              <Plus size={16} /> 250 ml
             </button>
-            <button onClick={() => addWater(500)} className="flex-1 h-10 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform">
-              <Plus size={14} /> 500ml
+            <button onClick={() => addWater(500)} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#F4F7FF] text-[14px] font-semibold text-[#0A3CFF] transition-transform active:scale-[0.98] dark:bg-[#0A3CFF]/15 dark:text-[#AFC5FF]">
+              <Plus size={16} /> 500 ml
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* Calories */}
-        <div className="glass-card p-5">
-          <div className="flex items-center justify-between mb-4">
+        <section className="overflow-hidden rounded-[28px] border border-black/[0.05] bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+          <div className="mb-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                <Flame size={20} className="text-orange-500" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
+                <Flame size={22} />
               </div>
               <div>
-                <p className="text-[15px] font-bold text-gray-900 dark:text-white">Calorias</p>
-                <p className="text-[11px] text-gray-600 dark:text-gray-400 font-semibold">Limite: {targetCalories} kcal</p>
+                <p className="text-[17px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">Calorias</p>
+                <p className="text-[13px] text-gray-500 dark:text-gray-400">Limite de {targetCalories} kcal</p>
               </div>
             </div>
-            <p className={`text-2xl font-bold ${calPct >= 100 ? 'text-red-500' : 'text-orange-500'}`}>{data.calories}</p>
+            <p className="text-[20px] font-bold tracking-[-0.03em] text-[#0A3CFF] dark:text-[#AFC5FF]">{Math.round(calPct)}%</p>
           </div>
 
-          <div className="h-2.5 bg-light-bg dark:bg-dark-surface rounded-full overflow-hidden mb-4">
-            <div className={`h-full rounded-full transition-all duration-500 ${calPct >= 100 ? 'bg-red-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(calPct, 100)}%` }} />
+          <div className="mb-4 h-3 overflow-hidden rounded-full bg-[#E9EEF9] dark:bg-white/[0.08]">
+            <div className="h-full rounded-full bg-[#0A3CFF] transition-all duration-500" style={{ width: `${Math.min(calPct, 100)}%` }} />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <input
               type="number"
               inputMode="decimal"
-              placeholder="Kcal consumida"
+              placeholder="Adicionar calorias"
               value={calInput}
               onChange={(e) => setCalInput(e.target.value)}
-              className="flex-1 h-10 bg-light-bg dark:bg-dark-surface rounded-xl px-3 text-[14px] font-semibold text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-600 outline-none focus:ring-2 ring-orange-500 transition-shadow"
+              className="h-12 flex-1 rounded-2xl border border-black/[0.06] bg-[#F7F9FD] px-4 text-[15px] font-semibold text-gray-950 outline-none transition-shadow placeholder:text-gray-400 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-white dark:placeholder:text-gray-500"
             />
-            <button onClick={addCalories} className="w-10 h-10 bg-orange-500 text-white rounded-xl flex items-center justify-center shrink-0 active:scale-95 transition-transform">
+            <button
+              onClick={addCalories}
+              aria-label="Adicionar calorias"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#0A3CFF] text-white shadow-[0_14px_26px_rgba(10,60,255,0.24)] transition-transform active:scale-[0.98]"
+            >
               <Plus size={18} />
             </button>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

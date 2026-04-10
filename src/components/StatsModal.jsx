@@ -1,82 +1,90 @@
 import React, { useEffect, useState } from 'react';
 import { X, Trophy, Database, Activity } from 'lucide-react';
-import { getWorkoutHistory } from '../services/storage';
+import { getNormalizedWorkoutEntry, getWorkoutHistory, getWorkoutSessions } from '../services/storage';
+import { workoutPlan } from '../data/workoutPlan';
 
 export default function StatsModal({ onClose }) {
   const [stats, setStats] = useState({ totalWorkouts: 0, totalExercises: 0, totalVolume: 0 });
 
   useEffect(() => {
     const history = getWorkoutHistory();
-    const keys = Object.keys(history);
-    
     let exercisesCount = 0;
     let volumeKg = 0;
+    let totalWorkouts = 0;
 
-    keys.forEach(date => {
-        const exs = history[date].exercises || {};
-        exercisesCount += Object.keys(exs).length;
-        Object.values(exs).forEach(record => {
-            const kg = parseFloat(record.kg);
-            const reps = parseFloat(record.reps);
-            if (!isNaN(kg) && !isNaN(reps)) {
-                volumeKg += (kg * reps);
-            }
+    Object.values(history).forEach((dayEntry) => {
+      getWorkoutSessions(dayEntry).forEach((session) => {
+        totalWorkouts += 1;
+
+        Object.entries(session.exercises || {}).forEach(([exerciseId, record]) => {
+          exercisesCount += 1;
+
+          const plan = workoutPlan.schedule[session.workoutId];
+          const exerciseMeta = plan?.exercises?.find((exercise) => exercise.id === exerciseId);
+          const normalized = getNormalizedWorkoutEntry(record, exerciseMeta);
+
+          if (normalized?.kind === 'strength') {
+            volumeKg += normalized.primary * normalized.secondary;
+          }
         });
+      });
     });
 
     setStats({
-        totalWorkouts: keys.length,
-        totalExercises: exercisesCount,
-        totalVolume: volumeKg
+      totalWorkouts,
+      totalExercises: exercisesCount,
+      totalVolume: volumeKg,
     });
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-white/90 dark:bg-obsidian/95 backdrop-blur-xl flex flex-col p-6 overflow-y-auto transition-colors duration-300">
-      
-      {/* Header */}
-      <div className="flex justify-between items-center mb-10 pt-4">
-         <h1 className="text-3xl font-display font-bold tracking-tight text-black dark:text-white">Desempenho</h1>
-         <button onClick={onClose} className="w-10 h-10 bg-gray-100 dark:bg-surface rounded-full flex items-center justify-center text-gray-500 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors">
-            <X size={20} strokeWidth={2.5} />
-         </button>
+    <div className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white/90 p-6 backdrop-blur-xl transition-colors duration-300 dark:bg-obsidian/95">
+      <div className="mb-10 flex items-center justify-between pt-4">
+        <h1 className="text-3xl font-display font-bold tracking-tight text-black dark:text-white">Desempenho</h1>
+        <button
+          onClick={onClose}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:text-black dark:bg-surface dark:text-white/50 dark:hover:text-white"
+        >
+          <X size={20} strokeWidth={2.5} />
+        </button>
       </div>
 
       <div className="flex flex-col gap-6">
-          <div className="bg-white dark:bg-charcoal rounded-3xl p-6 border border-gray-100 dark:border-white/5 flex items-center gap-6 shadow-xl relative overflow-hidden transition-colors duration-300">
-             <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-primary-400/10 rounded-full blur-2xl"></div>
-             <div className="w-16 h-16 bg-gray-50 dark:bg-surface rounded-2xl flex items-center justify-center shrink-0 border border-primary-500/20 dark:border-primary-400/20">
-                <Trophy className="text-primary-500 dark:text-primary-400" size={32} />
-             </div>
-             <div>
-                 <span className="text-xs uppercase font-bold text-gray-400 dark:text-white/40 tracking-widest">Sessões Concluídas</span>
-                 <div className="text-4xl font-display font-black text-black dark:text-white">{stats.totalWorkouts}</div>
-             </div>
+        <div className="relative flex items-center gap-6 overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-xl transition-colors duration-300 dark:border-white/5 dark:bg-charcoal">
+          <div className="absolute -bottom-4 -right-4 h-32 w-32 rounded-full bg-primary-400/10 blur-2xl" />
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-primary-500/20 bg-gray-50 dark:border-primary-400/20 dark:bg-surface">
+            <Trophy className="text-primary-500 dark:text-primary-400" size={32} />
           </div>
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-white/40">Sessões concluídas</span>
+            <div className="text-4xl font-display font-black text-black dark:text-white">{stats.totalWorkouts}</div>
+          </div>
+        </div>
 
-          <div className="bg-white dark:bg-charcoal rounded-3xl p-6 border border-gray-100 dark:border-white/5 flex items-center gap-6 shadow-xl relative overflow-hidden transition-colors duration-300">
-             <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-[#00E5FF]/10 rounded-full blur-2xl"></div>
-             <div className="w-16 h-16 bg-cyan-50 dark:bg-surface rounded-2xl flex items-center justify-center shrink-0 border border-[#00E5FF]/20">
-                <Database className="text-cyan-500 dark:text-[#00E5FF]" size={32} />
-             </div>
-             <div>
-                 <span className="text-xs uppercase font-bold text-gray-400 dark:text-white/40 tracking-widest">Exercícios Salvos</span>
-                 <div className="text-4xl font-display font-black text-black dark:text-white">{stats.totalExercises}</div>
-             </div>
+        <div className="relative flex items-center gap-6 overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-xl transition-colors duration-300 dark:border-white/5 dark:bg-charcoal">
+          <div className="absolute -bottom-4 -right-4 h-32 w-32 rounded-full bg-[#0A3CFF]/10 blur-2xl" />
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-[#0A3CFF]/20 bg-[#F4F7FF] dark:bg-surface">
+            <Database className="text-[#0A3CFF] dark:text-[#AFC5FF]" size={32} />
           </div>
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-white/40">Exercícios salvos</span>
+            <div className="text-4xl font-display font-black text-black dark:text-white">{stats.totalExercises}</div>
+          </div>
+        </div>
 
-          <div className="bg-white dark:bg-charcoal rounded-3xl p-6 border border-gray-100 dark:border-white/5 flex items-center gap-6 shadow-xl relative overflow-hidden transition-colors duration-300">
-             <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl"></div>
-             <div className="w-16 h-16 bg-purple-50 dark:bg-surface rounded-2xl flex items-center justify-center shrink-0 border border-purple-500/20">
-                <Activity className="text-purple-500 dark:text-purple-400" size={32} />
-             </div>
-             <div>
-                 <span className="text-xs uppercase font-bold text-gray-400 dark:text-white/40 tracking-widest">Carga Total Deslocada</span>
-                 <div className="text-4xl font-display font-black text-black dark:text-white">{stats.totalVolume} <span className="text-sm font-medium text-gray-400 dark:text-white/30">KG</span></div>
-             </div>
+        <div className="relative flex items-center gap-6 overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-xl transition-colors duration-300 dark:border-white/5 dark:bg-charcoal">
+          <div className="absolute -bottom-4 -right-4 h-32 w-32 rounded-full bg-[#0A3CFF]/10 blur-2xl" />
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-[#0A3CFF]/20 bg-[#F4F7FF] dark:bg-surface">
+            <Activity className="text-[#0A3CFF] dark:text-[#AFC5FF]" size={32} />
           </div>
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-white/40">Carga total deslocada</span>
+            <div className="text-4xl font-display font-black text-black dark:text-white">
+              {stats.totalVolume.toLocaleString('pt-BR')} <span className="text-sm font-medium text-gray-400 dark:text-white/30">kg</span>
+            </div>
+          </div>
+        </div>
       </div>
-
     </div>
   );
 }

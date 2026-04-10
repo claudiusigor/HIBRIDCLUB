@@ -1,39 +1,150 @@
 export const STORAGE_KEY = '@hyperactive_logs';
 
-export const saveWorkoutLog = (workoutId, exerciseId, kg, reps) => {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    let existingStr;
-    try {
-      existingStr = localStorage.getItem(STORAGE_KEY);
-    } catch {
-      existingStr = null;
-    }
-    
-    let logs = {};
-    if (existingStr) {
-      try {
-        logs = JSON.parse(existingStr);
-      } catch {
-        logs = {}; // reset if corrupted
+const getLocalDateKey = () => {
+  const now = new Date();
+  const timezoneOffsetMs = now.getTimezoneOffset() * 60 * 1000;
+  return new Date(now.getTime() - timezoneOffsetMs).toISOString().split('T')[0];
+};
+
+const normalizeWorkoutEntry = (entry, exerciseMeta = {}) => {
+  if (!entry) return null;
+
+  if (entry.kind) {
+    return entry;
+  }
+
+  const isCardio =
+    exerciseMeta.type === 'cardio' ||
+    (typeof entry.kg === 'string' && entry.kg.includes('min')) ||
+    (typeof entry.reps === 'string' && entry.reps.includes('km'));
+
+  if (isCardio) {
+    return {
+      kind: 'cardio',
+      primary: parseFloat(String(entry.kg).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0,
+      secondary: parseFloat(String(entry.reps).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0,
+      primaryUnit: 'min',
+      secondaryUnit: 'km',
+      timestamp: entry.timestamp || Date.now(),
+    };
+  }
+
+  return {
+    kind: 'strength',
+    primary: Number(entry.kg) || 0,
+    secondary: Number(entry.reps) || 0,
+    primaryUnit: 'kg',
+    secondaryUnit: 'reps',
+    timestamp: entry.timestamp || Date.now(),
+  };
+};
+
+const normalizeSession = (session, fallbackWorkoutId) => {
+  if (!session) return null;
+
+  const workoutId = session.workoutId || fallbackWorkoutId;
+  const exercises = session.exercises && typeof session.exercises === 'object' ? session.exercises : {};
+
+  if (!workoutId || Object.keys(exercises).length === 0) {
+    return null;
+  }
+
+  return {
+    workoutId,
+    exercises,
+    updatedAt: session.updatedAt || Date.now(),
+  };
+};
+
+const normalizeDayEntry = (entry, dateKey) => {
+  const normalized = {
+    date: entry?.date || dateKey,
+    sessions: {},
+    nutrition: {
+      water: Number(entry?.nutrition?.water) || 0,
+      calories: Number(entry?.nutrition?.calories) || 0,
+    },
+  };
+
+  if (entry?.sessions && typeof entry.sessions === 'object') {
+    Object.entries(entry.sessions).forEach(([sessionKey, sessionValue]) => {
+      const session = normalizeSession(sessionValue, sessionKey);
+      if (session) {
+        normalized.sessions[session.workoutId] = session;
       }
+    });
+  }
+
+  if (Object.keys(normalized.sessions).length === 0 && entry?.workoutId && entry?.exercises) {
+    const legacySession = normalizeSession(
+      {
+        workoutId: entry.workoutId,
+        exercises: entry.exercises,
+        updatedAt: entry.updatedAt,
+      },
+      entry.workoutId
+    );
+
+    if (legacySession) {
+      normalized.sessions[legacySession.workoutId] = legacySession;
     }
+  }
+
+  return normalized;
+};
+
+const readLogs = () => {
+  try {
+    const existingStr = localStorage.getItem(STORAGE_KEY);
+    const parsed = existingStr ? JSON.parse(existingStr) : {};
+
+    return Object.entries(parsed).reduce((accumulator, [dateKey, entry]) => {
+      accumulator[dateKey] = normalizeDayEntry(entry, dateKey);
+      return accumulator;
+    }, {});
+  } catch {
+    return {};
+  }
+};
+
+const writeLogs = (logs) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+};
+
+export const getWorkoutSessions = (entry) => {
+  if (!entry?.sessions) return [];
+
+  return Object.values(entry.sessions)
+    .filter((session) => session?.workoutId && Object.keys(session.exercises || {}).length > 0)
+    .sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
+};
+
+export const hasWorkoutSessions = (entry) => getWorkoutSessions(entry).length > 0;
+
+export const saveWorkoutLog = (workoutId, exerciseId, payload) => {
+  try {
+    const today = getLocalDateKey();
+    const logs = readLogs();
 
     if (!logs[today]) {
-        logs[today] = {
-            date: today,
-            workoutId,
-            exercises: {}
-        };
+      logs[today] = normalizeDayEntry(null, today);
     }
 
-    logs[today].exercises[exerciseId] = {
-        kg: Number(kg),
-        reps: Number(reps),
-        timestamp: new Date().getTime()
-    };
+    if (!logs[today].sessions[workoutId]) {
+      logs[today].sessions[workoutId] = {
+        workoutId,
+        exercises: {},
+        updatedAt: Date.now(),
+      };
+    }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+    logs[today].sessions[workoutId].exercises[exerciseId] = {
+      ...payload,
+      timestamp: Date.now(),
+    };
+    logs[today].sessions[workoutId].updatedAt = Date.now();
+
+    writeLogs(logs);
     return true;
   } catch (error) {
     console.error('Failed to save log', error);
@@ -42,46 +153,37 @@ export const saveWorkoutLog = (workoutId, exerciseId, kg, reps) => {
 };
 
 export const getWorkoutHistory = () => {
-    try {
-        const existingStr = localStorage.getItem(STORAGE_KEY);
-        return existingStr ? JSON.parse(existingStr) : {};
-    } catch {
-        return {};
-    }
+  return readLogs();
 };
 
 export const saveNutritionLog = (waterMl, calories) => {
-    try {
-        const today = new Date().toISOString().split('T')[0];
-        const existingStr = localStorage.getItem(STORAGE_KEY);
-        const logs = existingStr ? JSON.parse(existingStr) : {};
+  try {
+    const today = getLocalDateKey();
+    const logs = readLogs();
 
-        if (!logs[today]) {
-            logs[today] = { date: today, exercises: {}, nutrition: { water: 0, calories: 0 } };
-        }
-        
-        if (!logs[today].nutrition) {
-            logs[today].nutrition = { water: 0, calories: 0 };
-        }
-
-        logs[today].nutrition.water += parseInt(waterMl) || 0;
-        logs[today].nutrition.calories += parseInt(calories) || 0;
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-        return logs[today].nutrition;
-    } catch (e) {
-        return null;
+    if (!logs[today]) {
+      logs[today] = normalizeDayEntry(null, today);
     }
+
+    logs[today].nutrition.water += parseInt(waterMl, 10) || 0;
+    logs[today].nutrition.calories += parseInt(calories, 10) || 0;
+
+    writeLogs(logs);
+    return logs[today].nutrition;
+  } catch {
+    return null;
+  }
 };
 
 export const getNutritionLog = () => {
-    try {
-        const today = new Date().toISOString().split('T')[0];
-        const existingStr = localStorage.getItem(STORAGE_KEY);
-        const logs = existingStr ? JSON.parse(existingStr) : {};
-        if (logs[today] && logs[today].nutrition) return logs[today].nutrition;
-        return { water:  0, calories: 0 };
-    } catch {
-        return { water: 0, calories: 0 };
-    }
+  try {
+    const today = getLocalDateKey();
+    const logs = readLogs();
+    if (logs[today]?.nutrition) return logs[today].nutrition;
+    return { water: 0, calories: 0 };
+  } catch {
+    return { water: 0, calories: 0 };
+  }
 };
+
+export const getNormalizedWorkoutEntry = (entry, exerciseMeta) => normalizeWorkoutEntry(entry, exerciseMeta);

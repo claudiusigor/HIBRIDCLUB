@@ -4,6 +4,8 @@ import {
   Moon,
   Sparkles,
   Download,
+  LogOut,
+  User,
   House,
   Footprints,
   Droplets,
@@ -61,7 +63,25 @@ function getInitialTheme() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-export default function Dashboard() {
+function getDisplayName(userProfile, user) {
+  return userProfile?.display_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Atleta';
+}
+
+function getGreeting(name) {
+  const hour = new Date().getHours();
+
+  if (hour < 12) {
+    return `Bom dia, ${name}`;
+  }
+
+  if (hour < 18) {
+    return `Boa tarde, ${name}`;
+  }
+
+  return `Boa noite, ${name}`;
+}
+
+export default function Dashboard({ plan = workoutPlan, user, userProfile, onEditProfile, onSignOut }) {
   const [activeTab, setActiveTab] = useState(TABS.HOME);
   const [selectedDay, setSelectedDay] = useState('A');
   const [isExecuting, setIsExecuting] = useState(false);
@@ -134,29 +154,30 @@ export default function Dashboard() {
     setIsInstallAvailable(false);
   };
 
-  const activeWorkout = workoutPlan.schedule[selectedDay];
-  const days = Object.values(workoutPlan.schedule);
+  const activeWorkout = plan.schedule[selectedDay];
+  const days = Object.values(plan.schedule);
   const todayWorkoutId = TODAY_WORKOUT_BY_WEEKDAY[new Date().getDay()] || null;
+  const greeting = getGreeting(getDisplayName(userProfile, user));
 
   const currentTabContent = useMemo(() => {
     if (activeTab === TABS.STATS) {
-      return <StatsPage />;
+      return <StatsPage plan={plan} />;
     }
 
     if (activeTab === TABS.NUTRITION) {
-      return <NutritionPage />;
+      return <NutritionPage plan={plan} />;
     }
 
     if (activeTab === TABS.HISTORY) {
-      return <HistoryPage />;
+      return <HistoryPage plan={plan} />;
     }
 
     if (activeTab === TABS.PLAN) {
-      return <PlanPage />;
+      return <PlanPage plan={plan} />;
     }
 
     return null;
-  }, [activeTab]);
+  }, [activeTab, plan]);
 
   if (isExecuting) {
     return (
@@ -167,14 +188,22 @@ export default function Dashboard() {
   }
 
   return (
-    <div
-      className="min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white"
-    >
-      <header
-        className="sticky top-0 z-40 border-b border-black/[0.04] bg-[#F5F7FB]/94 px-5 pb-4 pt-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[#0A0D14]/92"
-      >
+    <div className="min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white">
+      <header className="sticky top-0 z-40 border-b border-black/[0.04] bg-[#F5F7FB]/94 px-5 pb-4 pt-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[#0A0D14]/92">
         <div className="mb-3 grid grid-cols-[44px_1fr_44px] items-center">
-          <div />
+          <div>
+            {user && onSignOut ? (
+              <button
+                onClick={onSignOut}
+                aria-label="Sair"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-colors dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
+              >
+                <LogOut size={17} />
+              </button>
+            ) : (
+              <div />
+            )}
+          </div>
           <div className="flex justify-center">
             <img
               src={`${import.meta.env.BASE_URL}HYBRIDCLUBBANNER.png`}
@@ -196,17 +225,32 @@ export default function Dashboard() {
         </div>
 
         {activeTab === TABS.HOME && (
-          <div className="rounded-[26px] bg-black/[0.04] p-1.5 dark:bg-white/[0.06]">
+          <>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <p className="text-[12px] font-medium tracking-[-0.01em] text-gray-500 dark:text-gray-400">
+                {greeting}
+              </p>
+              {onEditProfile && (
+                <button
+                  onClick={onEditProfile}
+                  aria-label="Editar perfil"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-black/[0.04] hover:text-[#0A3CFF] dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-[#AFC5FF]"
+                >
+                  <User size={16} />
+                </button>
+              )}
+            </div>
+            <div className="rounded-[26px] bg-black/[0.04] p-1.5 dark:bg-white/[0.06]">
             <div className="grid grid-cols-6 gap-1.5">
-              {days.map((w) => {
-                const isActive = selectedDay === w.id;
-                const isCardioDay = w.type === 'Cardio';
-                const isTodayCard = todayWorkoutId === w.id;
+              {days.map((workoutDay) => {
+                const isActive = selectedDay === workoutDay.id;
+                const isCardioDay = workoutDay.type === 'Cardio';
+                const isTodayCard = todayWorkoutId === workoutDay.id;
 
                 return (
                   <button
-                    key={w.id}
-                    onClick={() => setSelectedDay(w.id)}
+                    key={workoutDay.id}
+                    onClick={() => setSelectedDay(workoutDay.id)}
                     className={`flex min-h-[72px] flex-col items-center justify-center rounded-[22px] px-1.5 py-2 transition-all duration-300 ${
                       isActive
                         ? 'bg-white text-[#0A3CFF] shadow-[0_10px_22px_rgba(10,60,255,0.14)] dark:bg-[#0A3CFF] dark:text-white'
@@ -220,10 +264,10 @@ export default function Dashboard() {
                         isActive ? 'opacity-80' : isTodayCard ? 'text-[#0A3CFF] dark:text-[#AFC5FF]' : 'opacity-70'
                       }`}
                     >
-                      {w.day.substring(0, 3)}
+                      {workoutDay.day.substring(0, 3)}
                     </span>
                     <span className={`mt-1 text-[18px] font-bold leading-none ${isTodayCard && !isActive ? 'text-gray-950 dark:text-white' : ''}`}>
-                      {w.id}
+                      {workoutDay.id}
                     </span>
                     <span className="mt-1 flex h-5 items-center justify-center">
                       {isCardioDay ? (
@@ -259,7 +303,8 @@ export default function Dashboard() {
                 );
               })}
             </div>
-          </div>
+            </div>
+          </>
         )}
       </header>
 
@@ -267,10 +312,10 @@ export default function Dashboard() {
         {activeTab === TABS.HOME && (
           <HomeContent
             activeWorkout={activeWorkout}
-            onStartWorkout={() => setIsExecuting(true)}
-            selectedDay={selectedDay}
-            isInstallAvailable={isInstallAvailable}
             onInstall={handleInstall}
+            onStartWorkout={() => setIsExecuting(true)}
+            isInstallAvailable={isInstallAvailable}
+            selectedDay={selectedDay}
           />
         )}
 
@@ -324,7 +369,7 @@ function PageFallback({ label }) {
   );
 }
 
-function HomeContent({ activeWorkout, onStartWorkout, selectedDay, isInstallAvailable, onInstall }) {
+function HomeContent({ activeWorkout, onInstall, onStartWorkout, isInstallAvailable, selectedDay }) {
   return (
     <>
       {isInstallAvailable && (
@@ -346,7 +391,7 @@ function HomeContent({ activeWorkout, onStartWorkout, selectedDay, isInstallAvai
               />
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0A3CFF] dark:text-[#AFC5FF]">Instalar app</p>
-                <p className="mt-1 text-[15px] font-semibold text-gray-950 dark:text-white">Adicionar o Hyperactive à tela inicial</p>
+                <p className="mt-1 text-[15px] font-semibold text-gray-950 dark:text-white">Adicionar o Hibrid Club à tela inicial</p>
               </div>
             </div>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0A3CFF] text-white shadow-[0_12px_24px_rgba(10,60,255,0.24)]">
@@ -358,9 +403,7 @@ function HomeContent({ activeWorkout, onStartWorkout, selectedDay, isInstallAvai
 
       <section className="mb-4">
         <div className="mb-3">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0A3CFF] dark:text-[#8FB1FF]">Plano do dia</p>
-          </div>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0A3CFF] dark:text-[#8FB1FF]">Plano do dia</p>
         </div>
         <TrainingCard workout={activeWorkout} onStart={onStartWorkout} />
       </section>
@@ -393,7 +436,7 @@ function HomeContent({ activeWorkout, onStartWorkout, selectedDay, isInstallAvai
             <h3 className="mt-1 text-[22px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">Treino diário</h3>
           </div>
         </div>
-        <WeightLog exercises={activeWorkout.exercises} workoutId={selectedDay} />
+        <WeightLog exercises={activeWorkout?.exercises || []} workoutId={selectedDay} />
       </section>
     </>
   );

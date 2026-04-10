@@ -12,11 +12,13 @@ export default function TrainingCard({ workout, onStart }) {
 
       <div className="relative z-10 flex items-start justify-between gap-4">
         <div className="flex-1">
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${
-            isCardioDay
-              ? 'bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]'
-              : 'bg-black/[0.05] text-gray-600 dark:bg-white/[0.08] dark:text-gray-300'
-          }`}>
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+              isCardioDay
+                ? 'bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]'
+                : 'bg-black/[0.05] text-gray-600 dark:bg-white/[0.08] dark:text-gray-300'
+            }`}
+          >
             {workout.type}
           </span>
           <h2 className="mt-3 text-[28px] font-bold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white">

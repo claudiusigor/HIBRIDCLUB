@@ -1,11 +1,13 @@
 import React from 'react';
-import { Droplets, Flame, Dumbbell, Activity, FileText } from 'lucide-react';
+import { Activity, Droplets, Dumbbell, FileText, Flame } from 'lucide-react';
 import { workoutPlan } from '../../data/workoutPlan';
 
 const DAY_ORDER = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-export default function PlanPage() {
-  const sessions = DAY_ORDER.map((dayId) => workoutPlan.schedule[dayId]).filter(Boolean);
+export default function PlanPage({ plan = workoutPlan }) {
+  const sessions = DAY_ORDER.map((dayId) => plan.schedule[dayId]).filter(Boolean);
+  const planBadge = plan.metadata?.isTemplate ? plan.metadata.title || 'Plano Base Hibrid Club' : 'Claudius - Hibrid Club';
+  const sourceLabel = plan.metadata?.sourceFile || 'estrutura interna do app';
 
   return (
     <div>
@@ -13,22 +15,22 @@ export default function PlanPage() {
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-[#0A3CFF]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
             <FileText size={12} />
-            Transcrito do PDF
+            {planBadge}
           </span>
         </div>
         <h2 className="mt-3 text-[32px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">Plano Híbrido</h2>
         <p className="mt-2 max-w-[36rem] text-[14px] leading-relaxed text-gray-500 dark:text-gray-400">
-          Conteúdo estruturado a partir de {workoutPlan.metadata.sourceFile}, organizado para consulta rápida no app.
+          Conteúdo estruturado a partir de {sourceLabel}, organizado para consulta rápida no app.
         </p>
       </header>
 
       <section className="mb-4 grid grid-cols-2 gap-3">
-        <OverviewCard icon={<Dumbbell size={18} />} label="Foco" value={workoutPlan.general.focus} />
-        <OverviewCard icon={<Flame size={18} />} label="TDEE" value={`${workoutPlan.general.tdee} kcal`} />
+        <OverviewCard icon={<Dumbbell size={18} />} label="Foco" value={plan.general.focus} />
+        <OverviewCard icon={<Flame size={18} />} label="TDEE" value={`${plan.general.tdee} kcal`} />
         <OverviewCard
           icon={<Droplets size={18} />}
           label="Água"
-          value={`${workoutPlan.general.waterRecommendedLiters.min.toFixed(1)}-${workoutPlan.general.waterRecommendedLiters.max.toFixed(1)}L`}
+          value={`${plan.general.waterRecommendedLiters.min.toFixed(1)}-${plan.general.waterRecommendedLiters.max.toFixed(1)}L`}
         />
         <OverviewCard icon={<Activity size={18} />} label="Sessões" value={`${sessions.length} dias`} />
       </section>
@@ -36,25 +38,25 @@ export default function PlanPage() {
       <section className="mb-4 overflow-hidden rounded-[28px] border border-black/[0.05] bg-white shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
         <div className="border-b border-black/[0.05] px-5 py-4 dark:border-white/[0.06]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Objetivo do ciclo</p>
-          <p className="mt-2 text-[18px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">{workoutPlan.general.objective}</p>
-          <p className="mt-2 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">{workoutPlan.general.strategy}</p>
+          <p className="mt-2 text-[18px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">{plan.general.objective}</p>
+          <p className="mt-2 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">{plan.general.strategy}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3 px-5 py-4">
-          <InfoRow label="Calorias alvo" value={`${workoutPlan.general.calorieTarget.min}-${workoutPlan.general.calorieTarget.max} kcal/dia`} />
+          <InfoRow label="Calorias alvo" value={`${plan.general.calorieTarget.min}-${plan.general.calorieTarget.max} kcal/dia`} />
           <InfoRow
             label="Hidratação base"
-            value={`${workoutPlan.general.waterBaseLiters.min.toFixed(1)}-${workoutPlan.general.waterBaseLiters.max.toFixed(1)} L/dia`}
+            value={`${plan.general.waterBaseLiters.min.toFixed(1)}-${plan.general.waterBaseLiters.max.toFixed(1)} L/dia`}
           />
           <InfoRow
             label="Hidratação recomendada"
-            value={`${workoutPlan.general.waterRecommendedLiters.min.toFixed(1)}-${workoutPlan.general.waterRecommendedLiters.max.toFixed(1)} L/dia`}
+            value={`${plan.general.waterRecommendedLiters.min.toFixed(1)}-${plan.general.waterRecommendedLiters.max.toFixed(1)} L/dia`}
           />
         </div>
       </section>
 
       <div className="mb-4 flex flex-col gap-2">
-        {workoutPlan.general.operationalRules.map((rule) => (
+        {plan.general.operationalRules.map((rule) => (
           <div
             key={rule}
             className="rounded-[22px] border border-black/[0.05] bg-white px-4 py-3 text-[13px] leading-relaxed text-gray-600 shadow-[0_10px_24px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-300 dark:shadow-none"

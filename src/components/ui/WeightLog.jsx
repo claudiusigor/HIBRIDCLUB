@@ -8,16 +8,18 @@ function LogItem({ ex, workoutId }) {
   const [val2, setVal2] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!val1 || !val2) return;
 
-    saveWorkoutLog(workoutId, ex.id, {
+    const didSave = await saveWorkoutLog(workoutId, ex.id, {
       kind: isCardio ? 'cardio' : 'strength',
       primary: Number(val1),
       secondary: Number(val2),
       primaryUnit: isCardio ? 'min' : 'kg',
       secondaryUnit: isCardio ? 'km' : 'reps',
     });
+
+    if (!didSave) return;
 
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);

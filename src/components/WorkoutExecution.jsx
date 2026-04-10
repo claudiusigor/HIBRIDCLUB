@@ -8,11 +8,14 @@ export default function WorkoutExecution({ workout, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [val1, setVal1] = useState('');
   const [val2, setVal2] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   if (!workout?.exercises?.length) {
     return (
       <div className="min-h-screen bg-light-bg dark:bg-dark-bg flex items-center justify-center p-6">
-        <button onClick={onClose} className="font-semibold text-[#0A3CFF] dark:text-[#8FB1FF]">Nenhum exercício. Voltar.</button>
+        <button onClick={onClose} className="font-semibold text-[#0A3CFF] dark:text-[#8FB1FF]">
+          Nenhum exercicio. Voltar.
+        </button>
       </div>
     );
   }
@@ -21,15 +24,22 @@ export default function WorkoutExecution({ workout, onClose }) {
   const isCardio = ex.type === 'cardio';
   const isLast = currentIndex === workout.exercises.length - 1;
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    setSaveError('');
+
     if (val1 && val2) {
-      saveWorkoutLog(workout.id, ex.id, {
+      const didSave = await saveWorkoutLog(workout.id, ex.id, {
         kind: isCardio ? 'cardio' : 'strength',
         primary: Number(val1),
         secondary: Number(val2),
         primaryUnit: isCardio ? 'min' : 'kg',
         secondaryUnit: isCardio ? 'km' : 'reps',
       });
+
+      if (!didSave) {
+        setSaveError('Nao foi possivel salvar agora. Tente novamente.');
+        return;
+      }
     }
 
     if (!isLast) {
@@ -44,14 +54,19 @@ export default function WorkoutExecution({ workout, onClose }) {
   return (
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg text-black dark:text-white flex flex-col transition-colors">
       <header className="flex items-center justify-between p-5">
-        <button onClick={onClose} className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-[14px] font-semibold active:opacity-60">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-[14px] font-semibold active:opacity-60"
+        >
           <ChevronLeft size={18} /> Sair
         </button>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0A3CFF]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#8FB1FF]">
           <span className="h-1.5 w-1.5 rounded-full bg-[#0A3CFF] dark:bg-[#8FB1FF] animate-pulse" />
           Em progresso
         </span>
-        <span className="text-[14px] font-bold text-gray-900 dark:text-white">{currentIndex + 1}/{workout.exercises.length}</span>
+        <span className="text-[14px] font-bold text-gray-900 dark:text-white">
+          {currentIndex + 1}/{workout.exercises.length}
+        </span>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-6">
@@ -87,7 +102,7 @@ export default function WorkoutExecution({ workout, onClose }) {
               </div>
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.22em] text-[#0A3CFF] dark:text-[#8FB1FF]">
-                  {isCardio ? 'Distância (km)' : 'Repetições'}
+                  {isCardio ? 'Distancia (km)' : 'Repeticoes'}
                 </label>
                 <input
                   type="number"
@@ -105,8 +120,9 @@ export default function WorkoutExecution({ workout, onClose }) {
               style={{ backgroundColor: PRIMARY_BLUE }}
               className="w-full rounded-2xl px-4 py-3 text-[15px] font-bold uppercase tracking-[0.18em] text-white shadow-[0_16px_30px_rgba(10,60,255,0.28)] transition-all active:scale-[0.98] hover:brightness-110"
             >
-              {isLast ? 'Concluir treino' : 'Salvar e próximo'}
+              {isLast ? 'Concluir treino' : 'Salvar e proximo'}
             </button>
+            {saveError && <p className="mt-3 text-center text-[13px] font-medium text-rose-600 dark:text-rose-300">{saveError}</p>}
           </div>
         </div>
       </main>

@@ -1,10 +1,10 @@
 import React from 'react'
-import Dashboard from './components/Dashboard'
+import AuthGate from './components/auth/AuthGate'
 
 function App() {
   return (
     <>
-      <Dashboard />
+      <AuthGate />
     </>
   )
 }

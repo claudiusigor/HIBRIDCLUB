@@ -1,8 +1,32 @@
-export const STORAGE_KEY = '@hyperactive_logs';
+import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 
+let activeStorageScope = 'guest';
 let memoryLogs = null;
-let pendingWriteTimeout = null;
-let flushListenersInstalled = false;
+let lastStorageError = null;
+
+const EMPTY_NUTRITION = { water: 0, calories: 0 };
+
+export const setStorageScope = (scope) => {
+  activeStorageScope = scope || 'guest';
+  memoryLogs = null;
+  lastStorageError = null;
+};
+
+const setStorageError = (error, context) => {
+  lastStorageError = {
+    context,
+    message: error?.message || 'Falha ao acessar registros.',
+    timestamp: Date.now(),
+  };
+};
+
+const clearStorageError = () => {
+  lastStorageError = null;
+};
+
+export const getLastStorageError = () => lastStorageError;
+
+const getActiveUserId = () => (activeStorageScope === 'guest' ? null : activeStorageScope);
 
 const getLocalDateKey = () => {
   const now = new Date();
@@ -65,8 +89,8 @@ const normalizeDayEntry = (entry, dateKey) => {
     date: entry?.date || dateKey,
     sessions: {},
     nutrition: {
-      water: Number(entry?.nutrition?.water) || 0,
-      calories: Number(entry?.nutrition?.calories) || 0,
+      water: Number(entry?.nutrition?.water ?? entry?.water) || 0,
+      calories: Number(entry?.nutrition?.calories ?? entry?.calories) || 0,
     },
   };
 
@@ -97,85 +121,107 @@ const normalizeDayEntry = (entry, dateKey) => {
   return normalized;
 };
 
-const parseLogsFromStorage = () => {
-  try {
-    const existingStr = localStorage.getItem(STORAGE_KEY);
-    const parsed = existingStr ? JSON.parse(existingStr) : {};
+const buildHistoryFromRows = (rows = []) => {
+  return rows.reduce((accumulator, row) => {
+    accumulator[row.date] = normalizeDayEntry(
+      {
+        date: row.date,
+        sessions: row.sessions || {},
+        water: row.water,
+        calories: row.calories,
+      },
+      row.date
+    );
+    return accumulator;
+  }, {});
+};
 
-    return Object.entries(parsed).reduce((accumulator, [dateKey, entry]) => {
-      accumulator[dateKey] = normalizeDayEntry(entry, dateKey);
-      return accumulator;
-    }, {});
-  } catch {
-    return {};
+const ensureSupabaseReady = () => {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase não configurado para armazenar os registros do usuário.');
   }
 };
 
-const flushLogsToStorage = () => {
-  if (pendingWriteTimeout) {
-    clearTimeout(pendingWriteTimeout);
-    pendingWriteTimeout = null;
+const ensureActiveUserId = () => {
+  const userId = getActiveUserId();
+  if (!userId) {
+    throw new Error('Nenhum usuário autenticado para salvar ou ler registros.');
   }
-
-  if (!memoryLogs) {
-    return;
-  }
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryLogs));
-  } catch (error) {
-    console.error('Failed to flush logs', error);
-  }
+  return userId;
 };
 
-const installFlushListeners = () => {
-  if (flushListenersInstalled || typeof window === 'undefined') {
-    return;
-  }
+const getEmptyDayEntry = (dateKey) =>
+  normalizeDayEntry(
+    {
+      date: dateKey,
+      sessions: {},
+      nutrition: EMPTY_NUTRITION,
+    },
+    dateKey
+  );
 
-  const flushOnHide = () => flushLogsToStorage();
-  window.addEventListener('pagehide', flushOnHide);
-  window.addEventListener('beforeunload', flushOnHide);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      flushLogsToStorage();
-    }
-  });
-  flushListenersInstalled = true;
+const getCachedHistory = () => memoryLogs || {};
+
+const setCachedHistory = (nextHistory) => {
+  memoryLogs = nextHistory;
 };
 
-const scheduleWrite = () => {
-  if (pendingWriteTimeout) {
-    clearTimeout(pendingWriteTimeout);
-  }
+const getCachedDayEntry = (dateKey) => getCachedHistory()[dateKey] || null;
 
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    pendingWriteTimeout = window.setTimeout(() => {
-      window.requestIdleCallback(() => {
-        flushLogsToStorage();
-      });
-    }, 180);
-    return;
-  }
+const setCachedDayEntry = (dateKey, dayEntry) => {
+  const nextHistory = {
+    ...getCachedHistory(),
+    [dateKey]: dayEntry,
+  };
 
-  pendingWriteTimeout = window.setTimeout(() => {
-    flushLogsToStorage();
-  }, 180);
+  setCachedHistory(nextHistory);
 };
 
-const readLogs = () => {
-  if (memoryLogs) {
-    return memoryLogs;
-  }
+const fetchDayRow = async (userId, dateKey) => {
+  const { data, error } = await supabase
+    .from('daily_logs')
+    .select('date, sessions, water, calories')
+    .eq('user_id', userId)
+    .eq('date', dateKey)
+    .maybeSingle();
 
-  memoryLogs = parseLogsFromStorage();
-  installFlushListeners();
-  return memoryLogs;
+  if (error) throw error;
+  return data;
 };
 
-const writeLogs = (logs) => {
-  memoryLogs = logs;
-  scheduleWrite();
+const upsertDayRow = async (userId, dateKey, dayEntry) => {
+  const payload = {
+    user_id: userId,
+    date: dateKey,
+    sessions: dayEntry.sessions || {},
+    water: Number(dayEntry.nutrition?.water) || 0,
+    calories: Number(dayEntry.nutrition?.calories) || 0,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('daily_logs')
+    .upsert(payload, { onConflict: 'user_id,date' })
+    .select('date, sessions, water, calories')
+    .single();
+
+  if (error) throw error;
+  return normalizeDayEntry(data, dateKey);
+};
+
+const getRemoteDayEntry = async (dateKey) => {
+  ensureSupabaseReady();
+  const userId = ensureActiveUserId();
+
+  const cached = getCachedDayEntry(dateKey);
+  if (cached) {
+    return cached;
+  }
+
+  const row = await fetchDayRow(userId, dateKey);
+  const normalized = row ? normalizeDayEntry(row, dateKey) : getEmptyDayEntry(dateKey);
+  setCachedDayEntry(dateKey, normalized);
+  return normalized;
 };
 
 export const getWorkoutSessions = (entry) => {
@@ -188,68 +234,97 @@ export const getWorkoutSessions = (entry) => {
 
 export const hasWorkoutSessions = (entry) => getWorkoutSessions(entry).length > 0;
 
-export const saveWorkoutLog = (workoutId, exerciseId, payload) => {
+export const saveWorkoutLog = async (workoutId, exerciseId, payload) => {
   try {
+    ensureSupabaseReady();
+    const userId = ensureActiveUserId();
     const today = getLocalDateKey();
-    const logs = readLogs();
+    const dayEntry = await getRemoteDayEntry(today);
 
-    if (!logs[today]) {
-      logs[today] = normalizeDayEntry(null, today);
-    }
-
-    if (!logs[today].sessions[workoutId]) {
-      logs[today].sessions[workoutId] = {
+    if (!dayEntry.sessions[workoutId]) {
+      dayEntry.sessions[workoutId] = {
         workoutId,
         exercises: {},
         updatedAt: Date.now(),
       };
     }
 
-    logs[today].sessions[workoutId].exercises[exerciseId] = {
+    dayEntry.sessions[workoutId].exercises[exerciseId] = {
       ...payload,
       timestamp: Date.now(),
     };
-    logs[today].sessions[workoutId].updatedAt = Date.now();
+    dayEntry.sessions[workoutId].updatedAt = Date.now();
 
-    writeLogs(logs);
+    const persisted = await upsertDayRow(userId, today, dayEntry);
+    setCachedDayEntry(today, persisted);
+    clearStorageError();
     return true;
   } catch (error) {
-    console.error('Failed to save log', error);
+    console.error('Failed to save workout log', error);
+    setStorageError(error, 'saveWorkoutLog');
     return false;
   }
 };
 
-export const getWorkoutHistory = () => {
-  return readLogs();
-};
-
-export const saveNutritionLog = (waterMl, calories) => {
+export const getWorkoutHistory = async () => {
   try {
-    const today = getLocalDateKey();
-    const logs = readLogs();
+    ensureSupabaseReady();
+    const userId = ensureActiveUserId();
 
-    if (!logs[today]) {
-      logs[today] = normalizeDayEntry(null, today);
+    if (memoryLogs) {
+      return memoryLogs;
     }
 
-    logs[today].nutrition.water += parseInt(waterMl, 10) || 0;
-    logs[today].nutrition.calories += parseInt(calories, 10) || 0;
+    const { data, error } = await supabase
+      .from('daily_logs')
+      .select('date, sessions, water, calories')
+      .eq('user_id', userId)
+      .order('date', { ascending: true });
 
-    writeLogs(logs);
-    return logs[today].nutrition;
-  } catch {
+    if (error) throw error;
+
+    const history = buildHistoryFromRows(data || []);
+    setCachedHistory(history);
+    clearStorageError();
+    return history;
+  } catch (error) {
+    console.error('Failed to load workout history', error);
+    setStorageError(error, 'getWorkoutHistory');
+    return {};
+  }
+};
+
+export const saveNutritionLog = async (waterMl, calories) => {
+  try {
+    ensureSupabaseReady();
+    const userId = ensureActiveUserId();
+    const today = getLocalDateKey();
+    const dayEntry = await getRemoteDayEntry(today);
+
+    dayEntry.nutrition.water += parseInt(waterMl, 10) || 0;
+    dayEntry.nutrition.calories += parseInt(calories, 10) || 0;
+
+    const persisted = await upsertDayRow(userId, today, dayEntry);
+    setCachedDayEntry(today, persisted);
+    clearStorageError();
+    return persisted.nutrition;
+  } catch (error) {
+    console.error('Failed to save nutrition log', error);
+    setStorageError(error, 'saveNutritionLog');
     return null;
   }
 };
 
-export const getNutritionLog = () => {
+export const getNutritionLog = async () => {
   try {
     const today = getLocalDateKey();
-    const logs = readLogs();
-    if (logs[today]?.nutrition) return logs[today].nutrition;
-    return { water: 0, calories: 0 };
-  } catch {
-    return { water: 0, calories: 0 };
+    const dayEntry = await getRemoteDayEntry(today);
+    clearStorageError();
+    return dayEntry.nutrition || EMPTY_NUTRITION;
+  } catch (error) {
+    console.error('Failed to load nutrition log', error);
+    setStorageError(error, 'getNutritionLog');
+    return EMPTY_NUTRITION;
   }
 };
 

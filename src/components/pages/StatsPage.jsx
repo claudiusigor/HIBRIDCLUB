@@ -12,6 +12,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import {
+  getLastStorageError,
   getNormalizedWorkoutEntry,
   getWorkoutHistory,
   getWorkoutSessions,
@@ -64,7 +65,7 @@ const formatLongDate = (dateKey) =>
     month: 'long',
   });
 
-const buildStatsSummary = (history) => {
+function buildStatsSummary(history, plan) {
   const today = new Date();
   const monthKey = `${today.getFullYear()}-${today.getMonth()}`;
   const dayKeys = Object.keys(history).sort((a, b) => a.localeCompare(b));
@@ -88,22 +89,22 @@ const buildStatsSummary = (history) => {
     validDayKeys.push(dateKey);
 
     daySessions.forEach((session) => {
-      const plan = workoutPlan.schedule[session.workoutId];
+      const planEntry = plan.schedule[session.workoutId];
       const sessionItemCount = Object.keys(session.exercises || {}).length;
 
       sessions += 1;
       recentSessions.push({
         dateKey,
         workoutId: session.workoutId,
-        workoutName: plan?.name || session.workoutId,
-        workoutType: plan?.type || 'Treino',
+        workoutName: planEntry?.name || session.workoutId,
+        workoutType: planEntry?.type || 'Treino',
         itemCount: sessionItemCount,
         updatedAt: session.updatedAt || 0,
       });
 
       workoutFrequency[session.workoutId] = (workoutFrequency[session.workoutId] || 0) + 1;
 
-      if (plan?.type === 'Cardio') {
+      if (planEntry?.type === 'Cardio') {
         cardioCount += 1;
       } else {
         strengthCount += 1;
@@ -112,7 +113,7 @@ const buildStatsSummary = (history) => {
       Object.entries(session.exercises || {}).forEach(([exerciseId, entry]) => {
         exercises += 1;
 
-        const exerciseMeta = plan?.exercises?.find((item) => item.id === exerciseId);
+        const exerciseMeta = planEntry?.exercises?.find((item) => item.id === exerciseId);
         const normalized = getNormalizedWorkoutEntry(entry, exerciseMeta);
 
         if (normalized?.kind === 'strength') {
@@ -127,10 +128,14 @@ const buildStatsSummary = (history) => {
     return `${date.getFullYear()}-${date.getMonth()}` === monthKey;
   }).length;
 
+  const trainedDays = new Set(validDayKeys);
   let streak = 0;
-  if (validDayKeys.length > 0) {
-    let cursor = new Date(`${validDayKeys[validDayKeys.length - 1]}T00:00:00`);
-    const trainedDays = new Set(validDayKeys);
+  if (trainedDays.size > 0) {
+    const cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    if (!trainedDays.has(toDateKey(cursor))) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
 
     while (trainedDays.has(toDateKey(cursor))) {
       streak += 1;
@@ -160,7 +165,7 @@ const buildStatsSummary = (history) => {
     ? {
         workoutId: topWorkoutEntry[0],
         count: topWorkoutEntry[1],
-        name: workoutPlan.schedule[topWorkoutEntry[0]]?.name || topWorkoutEntry[0],
+        name: plan.schedule[topWorkoutEntry[0]]?.name || topWorkoutEntry[0],
       }
     : null;
 
@@ -176,7 +181,7 @@ const buildStatsSummary = (history) => {
       hasWorkout: daySessions.length > 0,
       sessions: daySessions.map((session) => ({
         workoutId: session.workoutId,
-        workoutName: workoutPlan.schedule[session.workoutId]?.name || session.workoutId,
+        workoutName: plan.schedule[session.workoutId]?.name || session.workoutId,
       })),
     };
   });
@@ -197,16 +202,30 @@ const buildStatsSummary = (history) => {
     topWorkout,
     lastWorkout,
   };
-};
+}
 
-export default function StatsPage() {
+export default function StatsPage({ plan = workoutPlan }) {
   const [statsSummary, setStatsSummary] = useState(EMPTY_SUMMARY);
   const [selectedInsight, setSelectedInsight] = useState(INSIGHTS.sessions);
+  const [storageError, setStorageError] = useState(null);
 
   useEffect(() => {
-    const history = getWorkoutHistory();
-    setStatsSummary(buildStatsSummary(history));
-  }, []);
+    let isMounted = true;
+
+    const loadStats = async () => {
+      const history = await getWorkoutHistory();
+      if (isMounted) {
+        setStatsSummary(buildStatsSummary(history, plan));
+        setStorageError(getLastStorageError());
+      }
+    };
+
+    loadStats();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [plan]);
 
   const consistencyCards = useMemo(
     () => [
@@ -291,9 +310,7 @@ export default function StatsPage() {
       case INSIGHTS.lastWorkout:
         return {
           eyebrow: 'Último treino salvo',
-          title: statsSummary.lastWorkout
-            ? `${statsSummary.lastWorkout.workoutName}`
-            : 'Nenhum treino salvo ainda',
+          title: statsSummary.lastWorkout ? `${statsSummary.lastWorkout.workoutName}` : 'Nenhum treino salvo ainda',
           description: statsSummary.lastWorkout
             ? `${formatLongDate(statsSummary.lastWorkout.dateKey)} • ${statsSummary.lastWorkout.itemCount} itens registrados`
             : 'Assim que você salvar o primeiro treino, o app mostra aqui o registro mais recente.',
@@ -326,7 +343,7 @@ export default function StatsPage() {
           description: 'Esse total soma todos os exercícios preenchidos nas suas sessões válidas.',
           items: statsSummary.recentSessions.map((session) => ({
             primary: session.workoutName,
-            secondary: `${session.itemCount} itens • ${formatShortDate(session.dateKey)}`,
+            secondary: `${formatShortDate(session.dateKey)} • ${session.itemCount} itens`,
           })),
         };
       case INSIGHTS.volume:
@@ -381,9 +398,7 @@ export default function StatsPage() {
           description: 'Uma leitura rápida da sua consistência recente, sem duplicar o calendário completo do histórico.',
           items: statsSummary.weeklyRhythm.map((day) => ({
             primary: `${day.label} ${day.dayNumber}`,
-            secondary: day.hasWorkout
-              ? day.sessions.map((session) => session.workoutId).join(' • ')
-              : 'Sem treino salvo',
+            secondary: day.hasWorkout ? day.sessions.map((session) => session.workoutId).join(' • ') : 'Sem treino salvo',
           })),
         };
       case INSIGHTS.sessions:
@@ -406,6 +421,11 @@ export default function StatsPage() {
 
   return (
     <div>
+      {storageError && (
+        <div className="mb-4 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          Alguns dados nao puderam ser sincronizados agora. Tente atualizar em instantes.
+        </div>
+      )}
       <header className="mb-5">
         <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Painel analítico</p>
         <h2 className="mt-1 text-[32px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">Desempenho</h2>
@@ -445,12 +465,7 @@ export default function StatsPage() {
         />
         <div className="grid grid-cols-2 gap-3">
           {consistencyCards.map((card) => (
-            <InsightCard
-              key={card.id}
-              {...card}
-              isActive={selectedInsight === card.id}
-              onClick={() => setSelectedInsight(card.id)}
-            />
+            <InsightCard key={card.id} {...card} isActive={selectedInsight === card.id} onClick={() => setSelectedInsight(card.id)} />
           ))}
         </div>
       </section>
@@ -463,12 +478,7 @@ export default function StatsPage() {
         />
         <div className="grid grid-cols-2 gap-3">
           {executionCards.map((card) => (
-            <InsightCard
-              key={card.id}
-              {...card}
-              isActive={selectedInsight === card.id}
-              onClick={() => setSelectedInsight(card.id)}
-            />
+            <InsightCard key={card.id} {...card} isActive={selectedInsight === card.id} onClick={() => setSelectedInsight(card.id)} />
           ))}
         </div>
       </section>

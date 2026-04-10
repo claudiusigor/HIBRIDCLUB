@@ -7,12 +7,25 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    background-color: #f5f7fb;
   }
+
+  html,
+  body,
+  #root {
+    min-height: 100dvh;
+  }
+
   body {
     @apply antialiased font-sans bg-[#F2F2F7] text-black;
   }
+
   .dark body {
-    @apply bg-black text-white;
+    @apply bg-[#0A0D14] text-white;
+  }
+
+  .dark html {
+    background-color: #0a0d14;
   }
 }
 

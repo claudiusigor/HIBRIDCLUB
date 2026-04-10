@@ -15,9 +15,12 @@ export default defineConfig({
         name: 'Hyperactive Fit',
         short_name: 'Hyperactive',
         description: 'Aplicativo de monitoramento híbrido',
+        start_url: basePath,
+        scope: basePath,
         theme_color: '#0D0D0D',
         background_color: '#0D0D0D',
-        display: 'standalone',
+        display: 'fullscreen',
+        orientation: 'portrait',
         icons: [
           {
             src: 'iconpwa.png',

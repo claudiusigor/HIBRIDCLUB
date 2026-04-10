@@ -4,7 +4,7 @@ import Iridescence from '../effects/Iridescence';
 
 export default function OnboardingScreen({ onContinue }) {
   return (
-    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#F5F7FB] px-6 pb-10 pt-8 text-gray-900 dark:bg-[#0A0D14] dark:text-white">
+    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#F5F7FB] px-6 pb-[calc(env(safe-area-inset-bottom)+1.75rem)] pt-8 text-gray-900 dark:bg-[#0A0D14] dark:text-white">
       <div className="absolute inset-0">
         <Iridescence
           color={[0.1, 0.4, 1]}
@@ -30,7 +30,7 @@ export default function OnboardingScreen({ onContinue }) {
           </div>
         </div>
 
-        <div className="pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="pt-4">
           <button
             onClick={onContinue}
             className="group relative flex h-16 w-full items-center justify-center overflow-hidden rounded-[28px] border border-white/45 bg-white/18 px-5 text-[16px] font-semibold tracking-[-0.02em] text-gray-950 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur-[28px] transition-all duration-300 active:scale-[0.99] dark:border-white/[0.16] dark:bg-white/[0.08] dark:text-white dark:shadow-[0_20px_44px_rgba(0,0,0,0.34)]"

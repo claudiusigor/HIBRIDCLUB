@@ -1,1 +1,1 @@
-if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/hibridclub/sw.js', { scope: '/hibridclub/' })})}
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/HIBRIDCLUB/sw.js', { scope: '/HIBRIDCLUB/' })})}

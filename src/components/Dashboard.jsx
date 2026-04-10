@@ -19,6 +19,9 @@ const StatsPage = lazy(() => import('./pages/StatsPage'));
 const NutritionPage = lazy(() => import('./pages/NutritionPage'));
 const PlanPage = lazy(() => import('./pages/PlanPage'));
 const WorkoutExecution = lazy(() => import('./WorkoutExecution'));
+const THEME_STORAGE_KEY = 'hyperactive-theme';
+const DARK_THEME_COLOR = '#0A0D14';
+const LIGHT_THEME_COLOR = '#F5F7FB';
 
 const TABS = { HOME: 'home', STATS: 'stats', NUTRITION: 'nutrition', HISTORY: 'history', PLAN: 'plan' };
 
@@ -48,17 +51,58 @@ const DOCK_ITEMS = [
   { id: TABS.PLAN, Icon: ClipboardList, label: 'Plano', iconSize: 21 },
 ];
 
+function getInitialTheme() {
+  if (typeof window === 'undefined') return true;
+
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === 'light') return false;
+  if (savedTheme === 'dark') return true;
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState(TABS.HOME);
   const [selectedDay, setSelectedDay] = useState('A');
   const [isExecuting, setIsExecuting] = useState(false);
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(getInitialTheme);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallAvailable, setIsInstallAvailable] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
+    window.localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', isDark ? DARK_THEME_COLOR : LIGHT_THEME_COLOR);
+    }
   }, [isDark]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handleSystemThemeChange = (event) => {
+      const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+      if (!savedTheme) {
+        setIsDark(event.matches);
+      }
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleSystemThemeChange);
+    } else {
+      mediaQuery.addListener(handleSystemThemeChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleSystemThemeChange);
+      } else {
+        mediaQuery.removeListener(handleSystemThemeChange);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event) => {

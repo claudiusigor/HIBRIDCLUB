@@ -124,21 +124,14 @@ export default function Dashboard() {
 
   return (
     <div
-      className="relative min-h-[100dvh] overflow-x-hidden bg-[#F5F7FB] text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white"
-      style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
+      className="min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 overflow-hidden">
-        <div className="absolute left-1/2 top-[-88px] h-40 w-[92vw] max-w-[420px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(10,60,255,0.14),rgba(10,60,255,0.04)_48%,transparent_74%)] blur-2xl dark:bg-[radial-gradient(circle_at_center,rgba(72,123,255,0.28),rgba(72,123,255,0.08)_48%,transparent_76%)]" />
-        <div className="absolute inset-x-5 top-[calc(env(safe-area-inset-top,0px)+6px)] h-px bg-gradient-to-r from-transparent via-black/10 to-transparent dark:via-white/12" />
-      </div>
-
       <header
-        className="sticky top-0 z-40 border-b border-black/[0.04] bg-[linear-gradient(180deg,rgba(245,247,251,0.98)_0%,rgba(245,247,251,0.92)_62%,rgba(245,247,251,0.78)_100%)] px-5 pb-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[linear-gradient(180deg,rgba(10,13,20,0.99)_0%,rgba(10,13,20,0.93)_62%,rgba(10,13,20,0.8)_100%)]"
-        style={{ paddingTop: 'calc(0.45rem + env(safe-area-inset-top, 0px))' }}
+        className="sticky top-0 z-40 border-b border-black/[0.04] bg-[#F5F7FB]/94 px-5 pb-4 pt-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[#0A0D14]/92"
       >
-        <div className="mb-3 grid grid-cols-[44px_1fr_44px] items-start">
+        <div className="mb-3 grid grid-cols-[44px_1fr_44px] items-center">
           <div />
-          <div className="flex justify-center pt-0.5">
+          <div className="flex justify-center">
             <img
               src={`${import.meta.env.BASE_URL}HYBRIDCLUBBANNER.png`}
               alt="Hybrid Club"
@@ -146,7 +139,7 @@ export default function Dashboard() {
               decoding="async"
               width="320"
               height="214"
-              className="h-auto max-h-[78px] w-auto object-contain sm:max-h-[88px]"
+              className="h-auto max-h-[74px] w-auto object-contain sm:max-h-[84px]"
             />
           </div>
           <button
@@ -244,10 +237,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div
-        className="fixed left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2"
-        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
-      >
+      <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2">
         <nav className="rounded-[28px] border border-black/[0.04] bg-white/92 px-3 py-2 shadow-[0_18px_40px_rgba(15,23,42,0.16)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#10141E]/88 dark:shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
           <div className="grid grid-cols-5 gap-1">
             {DOCK_ITEMS.map((item) => {

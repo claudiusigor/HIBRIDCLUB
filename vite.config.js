@@ -19,7 +19,7 @@ export default defineConfig({
         scope: basePath,
         theme_color: '#0A0D14',
         background_color: '#0A0D14',
-        display: 'fullscreen',
+        display: 'standalone',
         orientation: 'portrait',
         icons: [
           {

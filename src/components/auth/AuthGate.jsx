@@ -25,6 +25,7 @@ const STAGES = {
   LOADING_SESSION: 'loading_session',
   RESTORING_CACHED_PLAN: 'restoring_cached_plan',
   PREPARING_PROFILE: 'preparing_profile',
+  PREPARE_ERROR: 'prepare_error',
   NEEDS_PROFILE_SETUP: 'needs_profile_setup',
   APP: 'app',
   AUTH_ERROR: 'auth_error',
@@ -102,6 +103,7 @@ export default function AuthGate() {
   const [authMessage, setAuthMessage] = useState('');
   const [isAuthBusy, setIsAuthBusy] = useState(false);
   const [profileSetupMode, setProfileSetupMode] = useState('required');
+  const [prepareRetryNonce, setPrepareRetryNonce] = useState(0);
 
   const preparePromiseRef = useRef(null);
   const activeUserIdRef = useRef(null);
@@ -239,7 +241,7 @@ export default function AuthGate() {
       } catch (error) {
         if (!isMounted) return;
         setAuthMessage(error.message || 'Não foi possível preparar sua conta.');
-        setStage(STAGES.AUTH_ERROR);
+        setStage(STAGES.PREPARE_ERROR);
       }
     };
 
@@ -278,9 +280,21 @@ export default function AuthGate() {
       };
     }
 
-    const { data } = onAuthStateChange(async (event, nextSession) => {
+    const handleAuthEvent = async (event, nextSession) => {
       if (!isMounted) {
         return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        try {
+          const recoveredSession = await getCurrentSession();
+          if (recoveredSession?.user) {
+            await resolveSession('SESSION_RECOVERED', recoveredSession);
+            return;
+          }
+        } catch {
+          // ignore recovery read failures and continue with normal SIGNED_OUT flow
+        }
       }
 
       if (
@@ -293,13 +307,19 @@ export default function AuthGate() {
       }
 
       await resolveSession(event, nextSession);
+    };
+
+    const { data } = onAuthStateChange((event, nextSession) => {
+      setTimeout(() => {
+        void handleAuthEvent(event, nextSession);
+      }, 0);
     });
 
     return () => {
       isMounted = false;
       data.subscription.unsubscribe();
     };
-  }, [isConfigured]);
+  }, [isConfigured, prepareRetryNonce]);
 
   const handleContinueFromOnboarding = () => {
     window.localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
@@ -424,6 +444,25 @@ export default function AuthGate() {
         }
         actionLabel={stage === STAGES.LOADING_SESSION ? 'Reiniciar sessão' : 'Voltar ao login'}
         onAction={handleResetAuth}
+        isBusy={isAuthBusy}
+      />
+    );
+  }
+
+  if (stage === STAGES.PREPARE_ERROR) {
+    return (
+      <SessionLoadingScreen
+        label="Não conseguimos finalizar sua entrada"
+        description={
+          authMessage ||
+          'Sua sessão parece ativa, mas tivemos uma falha temporária ao carregar os dados. Tente novamente.'
+        }
+        actionLabel="Tentar novamente"
+        onAction={() => {
+          setAuthMessage('');
+          setStage(STAGES.LOADING_SESSION);
+          setPrepareRetryNonce((value) => value + 1);
+        }}
         isBusy={isAuthBusy}
       />
     );

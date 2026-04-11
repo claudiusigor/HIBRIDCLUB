@@ -7,7 +7,12 @@ let lastStorageError = null;
 const EMPTY_NUTRITION = { water: 0, calories: 0 };
 
 export const setStorageScope = (scope) => {
-  activeStorageScope = scope || 'guest';
+  const nextScope = scope || 'guest';
+  if (activeStorageScope === nextScope) {
+    return;
+  }
+
+  activeStorageScope = nextScope;
   memoryLogs = null;
   lastStorageError = null;
 };
@@ -290,7 +295,7 @@ export const getWorkoutHistory = async () => {
   } catch (error) {
     console.error('Failed to load workout history', error);
     setStorageError(error, 'getWorkoutHistory');
-    return {};
+    return memoryLogs || {};
   }
 };
 

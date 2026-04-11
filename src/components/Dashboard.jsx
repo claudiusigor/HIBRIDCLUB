@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { workoutPlan } from '../data/workoutPlan';
 import { DEFAULT_WEEK_ORDER, getWeekdayKeyFromDate, normalizePlanModel } from '../services/plans';
-import { getWorkoutHistory, hasWorkoutSessions } from '../services/storage';
+import { getLastStorageError, getWorkoutHistory, hasWorkoutSessions } from '../services/storage';
 import TrainingCard from './ui/TrainingCard';
 import WeightLog from './ui/WeightLog';
 
@@ -211,6 +211,10 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     const loadWeeklyCompletion = async () => {
       const history = await getWorkoutHistory();
       if (!mounted) return;
+      const storageError = getLastStorageError();
+      if (storageError?.context === 'getWorkoutHistory') {
+        return;
+      }
 
       const nextCompleted = WEEKDAY_VIEW.reduce((accumulator, weekdayKey) => {
         const dateKey = weekDateByWeekday[weekdayKey];

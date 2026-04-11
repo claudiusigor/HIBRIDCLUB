@@ -62,22 +62,22 @@ export default function LoginScreen({
               className="h-auto max-h-[92px] w-auto object-contain"
             />
           </div>
-          <p className="mt-4 text-[14px] font-medium tracking-[0.01em] text-gray-500 dark:text-gray-400">
+          <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
             Entre com sua conta
           </p>
         </div>
 
-        <div className="mt-8 rounded-[26px] border border-black/[0.08] bg-[#F1F4FF] p-4 dark:border-white/[0.12] dark:bg-[#0E1627]">
+        <div className="mt-10 space-y-3">
           <button
             onClick={() => onAuthAction(signInWithGoogle)}
             disabled={!isSupabaseConfigured || isBusy}
-            className="flex h-13 w-full items-center justify-center gap-3 rounded-2xl bg-[#0A3CFF] px-4 text-[15px] font-semibold text-white transition-transform disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
+            className="flex h-12 w-full items-center justify-center gap-3 rounded-2xl bg-[#0A3CFF] px-4 text-[15px] font-semibold text-white shadow-[0_14px_28px_rgba(10,60,255,0.26)] transition-transform disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
           >
             <span className="text-[19px] leading-none">G</span>
             Entrar com Google
           </button>
 
-          <div className="my-3 flex items-center gap-3">
+          <div className="my-2 flex items-center gap-3">
             <span className="h-px flex-1 bg-black/[0.12] dark:bg-white/[0.14]" />
             <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">ou</span>
             <span className="h-px flex-1 bg-black/[0.12] dark:bg-white/[0.14]" />
@@ -85,22 +85,22 @@ export default function LoginScreen({
 
           <button
             onClick={() => setShowEmailForm((value) => !value)}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-[14px] font-semibold text-gray-700 transition-colors hover:bg-[#F8FAFF] dark:border-white/[0.12] dark:bg-[#18243E] dark:text-gray-200 dark:hover:bg-[#1C2A47]"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.1] bg-white/92 px-4 text-[14px] font-semibold text-gray-700 transition-colors hover:bg-[#F8FAFF] dark:border-white/[0.12] dark:bg-white/[0.08] dark:text-gray-200 dark:hover:bg-white/[0.12]"
           >
             <Mail size={16} />
             Entrar com e-mail
           </button>
 
           {showEmailForm && (
-            <div className="mt-3 rounded-2xl border border-black/[0.08] bg-white p-3.5 dark:border-white/[0.12] dark:bg-[#101728]">
-              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
+            <div className="rounded-2xl border border-black/[0.08] bg-white/88 p-3.5 shadow-[0_12px_24px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-white/[0.12] dark:bg-white/[0.06] dark:shadow-none">
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
                 E-mail
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="você@email.com"
+                placeholder="voce@email.com"
                 className="h-10 w-full rounded-lg border border-black/[0.1] bg-white px-3.5 text-[15px] font-medium text-gray-950 outline-none transition-shadow placeholder:text-gray-400 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-white dark:placeholder:text-gray-500"
               />
               <button
@@ -114,9 +114,9 @@ export default function LoginScreen({
             </div>
           )}
 
-          <div className="mt-3 min-h-[30px]">
+          <div className="min-h-[22px] pt-1">
             {(localMessage || authMessage) && (
-              <p className="text-center text-[12px] leading-relaxed text-gray-500 dark:text-gray-400">
+              <p className="text-center text-[12px] leading-relaxed text-gray-600 dark:text-gray-300">
                 {localMessage || authMessage}
               </p>
             )}
@@ -126,6 +126,19 @@ export default function LoginScreen({
               </p>
             )}
           </div>
+        </div>
+
+        <div className="mt-auto pb-1 pt-6">
+          <a
+            href="https://instagram.com/instakoti"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mx-auto flex w-fit items-center gap-1.5 rounded-full border border-black/[0.08] bg-white/70 px-3 py-1.5 text-[11px] font-medium tracking-[0.01em] text-gray-600 backdrop-blur-md transition-colors hover:bg-white/90 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-gray-300 dark:hover:bg-white/[0.12]"
+            aria-label="Abrir Instagram @instakoti"
+          >
+            <span className="opacity-80">Desenvolvido por</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-100">@instakoti</span>
+          </a>
         </div>
       </div>
     </div>

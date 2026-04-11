@@ -48,7 +48,7 @@ export default function ProfileSetupScreen({
           <ArrowLeft size={18} />
         </button>
 
-        <div className="mt-7 text-center">
+        <div className="mt-7 text-center" style={{ animation: 'authFadeUp 220ms ease-out both' }}>
           <div className="flex justify-center">
             <img
               src={`${import.meta.env.BASE_URL}HYBRIDCLUBBANNER.png`}
@@ -63,31 +63,26 @@ export default function ProfileSetupScreen({
           </h1>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="mt-10 rounded-[30px] border border-black/[0.05] bg-white/76 p-4 shadow-[0_20px_44px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-[0_20px_44px_rgba(0,0,0,0.3)]"
-        >
-          <div className="rounded-[22px] border border-black/[0.06] bg-[#F7F9FD] p-3 dark:border-white/[0.08] dark:bg-[#0D121C]">
-            <div className="relative">
-              <input
-                type="text"
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                placeholder="Seu nome"
-                className="h-12 w-full rounded-2xl border border-black/[0.08] bg-white px-4 pr-14 text-[16px] font-medium text-gray-950 outline-none transition-shadow placeholder:text-gray-400 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-white dark:placeholder:text-gray-500"
-              />
-              <button
-                type="submit"
-                disabled={isBusy}
-                aria-label="Confirmar nome"
-                className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl bg-[#0A3CFF] text-white shadow-[0_8px_18px_rgba(10,60,255,0.22)] transition-transform disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
-              >
-                <Check size={16} />
-              </button>
-            </div>
+        <form onSubmit={handleSubmit} className="mt-10" style={{ animation: 'authFadeUp 220ms ease-out both 40ms' }}>
+          <div className="relative">
+            <input
+              type="text"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              placeholder="Seu nome"
+              className="h-12 w-full rounded-2xl border border-black/[0.08] bg-white/92 px-4 pr-14 text-[16px] font-medium text-gray-950 outline-none transition-shadow placeholder:text-gray-400 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/[0.08] dark:bg-white/[0.08] dark:text-white dark:placeholder:text-gray-500"
+            />
+            <button
+              type="submit"
+              disabled={isBusy}
+              aria-label="Confirmar nome"
+              className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl bg-[#0A3CFF] text-white shadow-[0_8px_18px_rgba(10,60,255,0.22)] transition-transform disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
+            >
+              <Check size={16} />
+            </button>
           </div>
 
-          <div className="mt-4 min-h-[24px]">
+          <div className="mt-3 min-h-[24px]">
             {errorMessage ? (
               <p className="text-center text-[13px] leading-relaxed text-rose-600 dark:text-rose-300">
                 {errorMessage}

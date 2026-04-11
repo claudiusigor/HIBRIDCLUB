@@ -16,7 +16,7 @@ export default function PlanStartScreen({
       <div className="absolute inset-0">
         <Iridescence color={[0.1, 0.4, 1]} mouseReact amplitude={0.08} speed={0.9} className="h-full w-full" />
       </div>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.42),transparent_34%),linear-gradient(180deg,rgba(245,247,251,0.42),rgba(245,247,251,0.18)_38%,rgba(245,247,251,0.82))] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_30%),linear-gradient(180deg,rgba(10,13,20,0.18),rgba(10,13,20,0.18)_38%,rgba(10,13,20,0.72))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.56),transparent_34%),linear-gradient(180deg,rgba(245,247,251,0.5),rgba(245,247,251,0.26)_38%,rgba(245,247,251,0.9))] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_30%),linear-gradient(180deg,rgba(10,13,20,0.18),rgba(10,13,20,0.18)_38%,rgba(10,13,20,0.72))]" />
       <button
         onClick={onToggleTheme}
         aria-label={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
@@ -49,12 +49,12 @@ export default function PlanStartScreen({
           <h1 className="mt-3 text-[31px] font-black tracking-[-0.05em] text-gray-950 dark:text-white">
             Como você quer montar sua ficha?
           </h1>
-          <p className="mx-auto mt-4 max-w-[18rem] text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">
+          <p className="mx-auto mt-4 max-w-[18rem] text-[15px] leading-relaxed text-gray-700 dark:text-gray-400">
             Importe seu plano em SVG estruturado ou comece com um plano padrão progressivo.
           </p>
         </div>
 
-        <div className="mt-8 rounded-[30px] border border-black/[0.05] bg-white/84 p-5 shadow-[0_20px_44px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-[0_20px_44px_rgba(0,0,0,0.3)]">
+        <div className="mt-8 rounded-[30px] border border-black/[0.08] bg-white/92 p-5 shadow-[0_20px_44px_rgba(15,23,42,0.1)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-[0_20px_44px_rgba(0,0,0,0.3)]">
           <button
             onClick={onSelectImport}
             disabled={isBusy}
@@ -67,14 +67,14 @@ export default function PlanStartScreen({
           <button
             onClick={onSelectDefault}
             disabled={isBusy}
-            className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.06] bg-[#F7F9FD] px-4 text-[15px] font-semibold text-gray-700 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-200"
+            className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.1] bg-[#F7F9FD] px-4 text-[15px] font-semibold text-gray-800 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-200"
           >
             <ListChecks size={18} />
             Usar plano padrão
           </button>
 
           <div className="mt-4 min-h-[42px]">
-            <p className="text-center text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
+            <p className="text-center text-[13px] leading-relaxed text-gray-700 dark:text-gray-400">
               {message || 'Depois você poderá editar dias, treinos e corrida do jeito que preferir.'}
             </p>
           </div>

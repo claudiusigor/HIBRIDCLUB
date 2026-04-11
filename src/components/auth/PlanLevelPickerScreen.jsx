@@ -17,7 +17,7 @@ export default function PlanLevelPickerScreen({
       <div className="absolute inset-0">
         <Iridescence color={[0.1, 0.4, 1]} mouseReact amplitude={0.08} speed={0.9} className="h-full w-full" />
       </div>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.42),transparent_34%),linear-gradient(180deg,rgba(245,247,251,0.42),rgba(245,247,251,0.18)_38%,rgba(245,247,251,0.82))] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_30%),linear-gradient(180deg,rgba(10,13,20,0.18),rgba(10,13,20,0.18)_38%,rgba(10,13,20,0.72))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.56),transparent_34%),linear-gradient(180deg,rgba(245,247,251,0.5),rgba(245,247,251,0.26)_38%,rgba(245,247,251,0.9))] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_30%),linear-gradient(180deg,rgba(10,13,20,0.18),rgba(10,13,20,0.18)_38%,rgba(10,13,20,0.72))]" />
       <button
         onClick={onToggleTheme}
         aria-label={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
@@ -36,7 +36,16 @@ export default function PlanLevelPickerScreen({
         </button>
 
         <div className="mt-7 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A3CFF]/12 text-[#0A3CFF] dark:bg-[#0A3CFF]/24 dark:text-[#AFC5FF]">
+          <div className="flex justify-center">
+            <img
+              src={`${import.meta.env.BASE_URL}HYBRIDCLUBBANNER.png`}
+              alt="Hibrid Club"
+              width="260"
+              height="174"
+              className="h-auto max-h-[92px] w-auto object-contain"
+            />
+          </div>
+          <div className="mx-auto mt-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A3CFF]/12 text-[#0A3CFF] dark:bg-[#0A3CFF]/24 dark:text-[#AFC5FF]">
             <Trophy size={20} />
           </div>
           <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0A3CFF] dark:text-[#AFC5FF]">
@@ -57,14 +66,14 @@ export default function PlanLevelPickerScreen({
                 onClick={() => onSelectTemplate(template.slug)}
                 className={`w-full rounded-[24px] border px-4 py-4 text-left shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all dark:shadow-none ${
                   isSelected
-                    ? 'border-[#0A3CFF]/50 bg-[#0A3CFF]/10 dark:border-[#AFC5FF]/45 dark:bg-[#0A3CFF]/18'
-                    : 'border-black/[0.05] bg-white/86 dark:border-white/[0.08] dark:bg-white/[0.05]'
+                    ? 'border-[#0A3CFF]/50 bg-[#0A3CFF]/12 dark:border-[#AFC5FF]/45 dark:bg-[#0A3CFF]/18'
+                    : 'border-black/[0.08] bg-white/92 dark:border-white/[0.08] dark:bg-white/[0.05]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[15px] font-bold text-gray-950 dark:text-white">{template.name}</p>
-                    <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">{template.description}</p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-gray-700 dark:text-gray-400">{template.description}</p>
                   </div>
                   <ArrowRight size={16} className={isSelected ? 'text-[#0A3CFF] dark:text-[#AFC5FF]' : 'text-gray-400'} />
                 </div>
@@ -74,7 +83,7 @@ export default function PlanLevelPickerScreen({
         </div>
 
         <div className="mt-4 min-h-[42px]">
-          <p className="text-center text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
+          <p className="text-center text-[13px] leading-relaxed text-gray-700 dark:text-gray-400">
             {message || 'Você poderá editar completamente este plano depois.'}
           </p>
         </div>

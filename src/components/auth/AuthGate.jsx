@@ -525,7 +525,10 @@ export default function AuthGate() {
       setStage(STAGES.APP);
       return;
     }
-
+    if (session?.user) {
+      setStage(activePlan ? STAGES.APP : STAGES.PLAN_SETUP);
+      return;
+    }
     handleResetAuth();
   };
 

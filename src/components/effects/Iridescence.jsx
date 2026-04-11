@@ -53,6 +53,9 @@ export default function Iridescence({
 }) {
   const containerRef = useRef(null);
   const mousePos = useRef({ x: 0.5, y: 0.5 });
+  const red = Number.isFinite(color?.[0]) ? color[0] : 0.1;
+  const green = Number.isFinite(color?.[1]) ? color[1] : 0.4;
+  const blue = Number.isFinite(color?.[2]) ? color[2] : 1;
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
@@ -88,7 +91,7 @@ export default function Iridescence({
       fragment: fragmentShader,
       uniforms: {
         uTime: { value: 0 },
-        uColor: { value: new Color(...color) },
+        uColor: { value: new Color(red, green, blue) },
         uResolution: {
           value: new Color(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height),
         },
@@ -169,7 +172,7 @@ export default function Iridescence({
       }
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
-  }, [amplitude, color, mouseReact, speed]);
+  }, [amplitude, blue, green, mouseReact, red, speed]);
 
   return <div ref={containerRef} className={className} aria-hidden="true" />;
 }

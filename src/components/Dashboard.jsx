@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { workoutPlan } from '../data/workoutPlan';
 import { DEFAULT_WEEK_ORDER, getWeekdayKeyFromDate, normalizePlanModel } from '../services/plans';
+import { getWorkoutHistory, hasWorkoutSessions } from '../services/storage';
 import TrainingCard from './ui/TrainingCard';
 import WeightLog from './ui/WeightLog';
 
@@ -56,6 +57,29 @@ const DOCK_ITEMS = [
   { id: TABS.PLAN, Icon: ClipboardList, label: 'Plano', iconSize: 21 },
 ];
 
+const toDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getCurrentWeekDateKeysByWeekday = () => {
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  const day = startOfWeek.getDay();
+  const daysFromMonday = (day + 6) % 7;
+  startOfWeek.setDate(startOfWeek.getDate() - daysFromMonday);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  return WEEKDAY_VIEW.reduce((accumulator, weekdayKey, index) => {
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + index);
+    accumulator[weekdayKey] = toDateKey(date);
+    return accumulator;
+  }, {});
+};
+
 function getInitialTheme() {
   if (typeof window === 'undefined') return true;
   const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -86,6 +110,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
   const [isDark, setIsDark] = useState(getInitialTheme);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallAvailable, setIsInstallAvailable] = useState(false);
+  const [completedWeekdays, setCompletedWeekdays] = useState({});
 
   useEffect(() => {
     setCurrentPlan(normalizePlanModel(plan));
@@ -173,6 +198,46 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setCompletedWeekdays({});
+      return;
+    }
+
+    let mounted = true;
+    const weekDateByWeekday = getCurrentWeekDateKeysByWeekday();
+
+    const loadWeeklyCompletion = async () => {
+      const history = await getWorkoutHistory();
+      if (!mounted) return;
+
+      const nextCompleted = WEEKDAY_VIEW.reduce((accumulator, weekdayKey) => {
+        const dateKey = weekDateByWeekday[weekdayKey];
+        accumulator[weekdayKey] = hasWorkoutSessions(history[dateKey]);
+        return accumulator;
+      }, {});
+
+      setCompletedWeekdays(nextCompleted);
+    };
+
+    void loadWeeklyCompletion();
+
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        void loadWeeklyCompletion();
+      }
+    };
+
+    window.addEventListener('focus', loadWeeklyCompletion);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('focus', loadWeeklyCompletion);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [user?.id, activeTab, isExecuting]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -274,6 +339,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                   const isCardioDay = slot.workout?.type === 'Cardio';
                   const isTodayCard = todayWeekdayKey === slot.weekdayKey;
                   const isRestDay = !slot.workout;
+                  const isCompletedThisWeek = Boolean(completedWeekdays[slot.weekdayKey]);
 
                   return (
                     <button
@@ -300,6 +366,14 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                       <span className="mt-1 flex h-5 items-center justify-center">
                         {isRestDay ? (
                           <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">off</span>
+                        ) : isCompletedThisWeek ? (
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              isActive
+                                ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.2)]'
+                                : 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]'
+                            }`}
+                          />
                         ) : isCardioDay ? (
                           <img
                             src={`${import.meta.env.BASE_URL}icontenis3.png?v=4`}

@@ -1,6 +1,6 @@
 import { workoutPlan } from '../data/workoutPlan';
 import { publicPlanTemplate } from '../data/publicPlanTemplate';
-import { getFallbackTemplateBySlug, progressivePlanTemplates } from '../data/progressivePlanTemplates';
+import { getFallbackTemplateBySlug, progressivePlanTemplates } from '../data/progressivePlanTemplatesV2';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { ensureUserProfile } from './profile';
 

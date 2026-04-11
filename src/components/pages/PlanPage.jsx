@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   ArrowDown,
@@ -53,23 +53,87 @@ function normalizeExercise(exercise, index) {
 export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) {
   const [editMode, setEditMode] = useState(false);
   const [draftPlan, setDraftPlan] = useState(() => normalizePlanModel(plan));
-  const [expandedWeekday, setExpandedWeekday] = useState('SEG');
+  const [expandedWeekday, setExpandedWeekday] = useState(null);
   const [dragSource, setDragSource] = useState(null);
   const [feedback, setFeedback] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [draftTouched, setDraftTouched] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [autoSaveError, setAutoSaveError] = useState('');
+  const [lastAutoSavedAt, setLastAutoSavedAt] = useState(null);
+  const [animatedWeekdays, setAnimatedWeekdays] = useState([]);
+  const [touchDragOverWeekday, setTouchDragOverWeekday] = useState(null);
+  const [isPointerDragging, setIsPointerDragging] = useState(false);
+  const [pointerDragOffsetY, setPointerDragOffsetY] = useState(0);
+
+  const draftPlanRef = useRef(draftPlan);
+  const draftTouchedRef = useRef(draftTouched);
+  const editModeRef = useRef(editMode);
+  const userIdRef = useRef(userId);
+  const autoSaveInFlightRef = useRef(false);
+  const queuedAutoSaveRef = useRef(null);
+  const cardRefs = useRef({});
+  const previousCardPositionsRef = useRef({});
+  const pointerDragStartYRef = useRef(0);
+  const pointerDragActivatedRef = useRef(false);
+  const pointerCardTopsRef = useRef({});
+  const pointerCardBoundsRef = useRef({});
+  const pointerSourceTopRef = useRef(0);
+  const pointerLastClientYRef = useRef(0);
+  const pointerDragOffsetYRef = useRef(0);
 
   useEffect(() => {
+    draftPlanRef.current = draftPlan;
+  }, [draftPlan]);
+
+  useEffect(() => {
+    draftTouchedRef.current = draftTouched;
+  }, [draftTouched]);
+
+  useEffect(() => {
+    editModeRef.current = editMode;
+  }, [editMode]);
+
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
+
+  useEffect(() => {
+    if (editMode || draftTouched) return;
     setDraftPlan(normalizePlanModel(plan));
-  }, [plan]);
+  }, [plan, editMode, draftTouched]);
 
   useEffect(() => {
     if (!userId) return;
+    const cacheKey = `hc_plan_draft_cache_${userId}`;
+    try {
+      const cachedValue = localStorage.getItem(cacheKey);
+      if (cachedValue && !editModeRef.current && !draftTouchedRef.current) {
+        const parsed = JSON.parse(cachedValue);
+        if (parsed?.planData) {
+          setDraftPlan(normalizePlanModel(parsed.planData));
+        }
+      }
+    } catch {
+      // ignore invalid local draft cache
+    }
+
     let mounted = true;
     void (async () => {
       try {
         const remoteDraft = await getUserPlanDraft(userId);
         if (!mounted || !remoteDraft) return;
-        setDraftPlan(normalizePlanModel(remoteDraft));
+        setDraftPlan((previous) => {
+          if (editModeRef.current || draftTouchedRef.current) {
+            return previous;
+          }
+          return normalizePlanModel(remoteDraft);
+        });
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ planData: remoteDraft, updatedAt: Date.now() }));
+        } catch {
+          // ignore local cache write failure
+        }
       } catch {
         // ignore bootstrap draft load failure
       }
@@ -78,6 +142,23 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
       mounted = false;
     };
   }, [userId]);
+
+  useEffect(() => {
+    setDraftTouched(false);
+    setAutoSaveError('');
+    setLastAutoSavedAt(null);
+    queuedAutoSaveRef.current = null;
+    autoSaveInFlightRef.current = false;
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || !editMode) return;
+    try {
+      localStorage.setItem(`hc_plan_draft_cache_${userId}`, JSON.stringify({ planData: draftPlan, updatedAt: Date.now() }));
+    } catch {
+      // ignore local cache write failure
+    }
+  }, [draftPlan, editMode, userId]);
 
   const activePlan = editMode ? draftPlan : normalizePlanModel(plan);
   const weekOrder = activePlan.weekOrder || DEFAULT_WEEK_ORDER;
@@ -100,15 +181,264 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
     [activePlan.schedule, weekOrder]
   );
 
-  const expandedCard = cards.find((card) => card.weekdayKey === expandedWeekday) || cards[0];
+  useLayoutEffect(() => {
+    const currentPositions = {};
+    cards.forEach((card) => {
+      const element = cardRefs.current[card.weekdayKey];
+      if (!element) return;
+      currentPositions[card.weekdayKey] = element.getBoundingClientRect().top;
+    });
+
+    cards.forEach((card) => {
+      const element = cardRefs.current[card.weekdayKey];
+      if (!element) return;
+
+      const previousTop = previousCardPositionsRef.current[card.weekdayKey];
+      const currentTop = currentPositions[card.weekdayKey];
+      if (typeof previousTop !== 'number' || typeof currentTop !== 'number') return;
+
+      const deltaY = previousTop - currentTop;
+      if (Math.abs(deltaY) < 1) return;
+
+      element.style.transition = 'none';
+      element.style.transform = `translateY(${deltaY}px)`;
+      requestAnimationFrame(() => {
+        element.style.transition = 'transform 280ms cubic-bezier(0.22, 1, 0.36, 1)';
+        element.style.transform = '';
+      });
+    });
+
+    previousCardPositionsRef.current = currentPositions;
+  }, [cards]);
+
+  const expandedCard = cards.find((card) => card.weekdayKey === expandedWeekday) || null;
 
   const updateDraft = (updater) => {
     setDraftPlan((previous) => {
       const base = normalizePlanModel(previous || plan);
       updater(base);
-      return normalizePlanModel(base);
+      const normalized = normalizePlanModel(base);
+      draftPlanRef.current = normalized;
+      return normalized;
     });
+    setDraftTouched(true);
+    setAutoSaveError('');
   };
+
+  const animateDays = (weekdayKeys, duration = 420) => {
+    const validKeys = (weekdayKeys || []).filter(Boolean);
+    if (!validKeys.length) return;
+    setAnimatedWeekdays((current) => Array.from(new Set([...current, ...validKeys])));
+    window.setTimeout(() => {
+      setAnimatedWeekdays((current) => current.filter((key) => !validKeys.includes(key)));
+    }, duration);
+  };
+
+  const getWeekdayFromClientPoint = (clientX, clientY, sourceKey = null) => {
+    const elements =
+      typeof document.elementsFromPoint === 'function'
+        ? document.elementsFromPoint(clientX, clientY)
+        : [document.elementFromPoint(clientX, clientY)].filter(Boolean);
+
+    for (const element of elements) {
+      const cardElement = element?.closest?.('[data-weekday-key]');
+      const weekdayKey = cardElement?.getAttribute?.('data-weekday-key');
+      if (!weekdayKey || !WEEK_ORDER_KEYS.includes(weekdayKey)) continue;
+      if (sourceKey && weekdayKey === sourceKey) continue;
+      return weekdayKey;
+    }
+    return null;
+  };
+
+  const getWeekdayFromPointerZone = (clientY, sourceKey) => {
+    const candidates = WEEK_ORDER_KEYS.filter((key) => key !== sourceKey)
+      .map((key) => ({ weekdayKey: key, ...pointerCardBoundsRef.current[key] }))
+      .filter((entry) => typeof entry.top === 'number' && typeof entry.bottom === 'number');
+
+    if (!candidates.length) return null;
+
+    const padding = 8;
+    const inside = candidates.find((entry) => clientY >= entry.top + padding && clientY <= entry.bottom - padding);
+    if (inside) return inside.weekdayKey;
+
+    let nearest = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const entry of candidates) {
+      const distance = Math.abs(clientY - entry.center);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = entry;
+      }
+    }
+
+    if (!nearest) return null;
+    return nearestDistance <= nearest.height * 0.55 ? nearest.weekdayKey : null;
+  };
+
+  const handlePointerDragStart = (weekdayKey, event) => {
+    if (!editMode) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.setPointerCapture) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    pointerDragStartYRef.current = event.clientY;
+    pointerLastClientYRef.current = event.clientY;
+    pointerDragActivatedRef.current = false;
+    pointerDragOffsetYRef.current = 0;
+    pointerCardTopsRef.current = WEEK_ORDER_KEYS.reduce((acc, key) => {
+      const element = cardRefs.current[key];
+      if (!element) return acc;
+      const rect = element.getBoundingClientRect();
+      acc[key] = rect.top;
+      return acc;
+    }, {});
+    pointerCardBoundsRef.current = WEEK_ORDER_KEYS.reduce((acc, key) => {
+      const element = cardRefs.current[key];
+      if (!element) return acc;
+      const rect = element.getBoundingClientRect();
+      acc[key] = {
+        top: rect.top,
+        bottom: rect.bottom,
+        center: rect.top + rect.height / 2,
+        height: rect.height,
+      };
+      return acc;
+    }, {});
+    pointerSourceTopRef.current = pointerCardTopsRef.current[weekdayKey] || 0;
+    setPointerDragOffsetY(0);
+    setIsPointerDragging(false);
+    setDragSource(weekdayKey);
+    setTouchDragOverWeekday(null);
+  };
+
+  const handlePointerDragMove = (event) => {
+    if (!editMode || !dragSource) return;
+    pointerLastClientYRef.current = event.clientY;
+    const nextOffsetY = event.clientY - pointerDragStartYRef.current;
+
+    if (!pointerDragActivatedRef.current) {
+      if (Math.abs(nextOffsetY) < 8) {
+        event.preventDefault();
+        return;
+      }
+      pointerDragActivatedRef.current = true;
+      setIsPointerDragging(true);
+    }
+
+    setPointerDragOffsetY(nextOffsetY);
+    pointerDragOffsetYRef.current = nextOffsetY;
+    const sourceHeight = pointerCardBoundsRef.current[dragSource]?.height || 0;
+    const draggedCenterY = pointerSourceTopRef.current + nextOffsetY + sourceHeight / 2;
+    const weekdayKey =
+      getWeekdayFromPointerZone(draggedCenterY, dragSource) ||
+      getWeekdayFromClientPoint(event.clientX, event.clientY, dragSource);
+    setTouchDragOverWeekday((current) => (current === weekdayKey ? current : weekdayKey));
+    event.preventDefault();
+  };
+
+  const handlePointerDragEnd = (event) => {
+    if (!editMode || !dragSource) return;
+    if (event.currentTarget.releasePointerCapture) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    const didActivateDrag = pointerDragActivatedRef.current;
+    const sourceKey = dragSource;
+    const sourceHeight = pointerCardBoundsRef.current[sourceKey]?.height || 0;
+    const draggedCenterY = pointerSourceTopRef.current + pointerDragOffsetYRef.current + sourceHeight / 2;
+    const targetKey =
+      touchDragOverWeekday ||
+      getWeekdayFromPointerZone(draggedCenterY || pointerLastClientYRef.current, sourceKey) ||
+      getWeekdayFromClientPoint(event.clientX, event.clientY, sourceKey);
+    if (didActivateDrag && sourceKey && targetKey && sourceKey !== targetKey) {
+      swapWeekdays(sourceKey, targetKey);
+    }
+
+    pointerDragActivatedRef.current = false;
+    setIsPointerDragging(false);
+    setPointerDragOffsetY(0);
+    pointerDragOffsetYRef.current = 0;
+    pointerDragStartYRef.current = 0;
+    pointerLastClientYRef.current = 0;
+    pointerCardTopsRef.current = {};
+    pointerCardBoundsRef.current = {};
+    pointerSourceTopRef.current = 0;
+    setDragSource(null);
+    setTouchDragOverWeekday(null);
+    event.preventDefault();
+  };
+
+  const persistDraftSilently = useCallback(async ({ force = false, planOverride = null } = {}) => {
+    const activeUserId = userIdRef.current;
+    if (!activeUserId || !editModeRef.current) {
+      return;
+    }
+    if (!force && !draftTouchedRef.current) {
+      return;
+    }
+
+    const planToPersist = normalizePlanModel(planOverride || draftPlanRef.current);
+
+    if (autoSaveInFlightRef.current) {
+      queuedAutoSaveRef.current = planToPersist;
+      return;
+    }
+
+    autoSaveInFlightRef.current = true;
+    setIsAutoSaving(true);
+    setAutoSaveError('');
+    try {
+      await saveUserPlanDraft(activeUserId, planToPersist);
+      setDraftTouched(false);
+      setLastAutoSavedAt(Date.now());
+    } catch {
+      setAutoSaveError('Nao foi possivel salvar automaticamente. Toque em "Salvar rascunho".');
+    } finally {
+      autoSaveInFlightRef.current = false;
+      setIsAutoSaving(false);
+
+      const queuedPlan = queuedAutoSaveRef.current;
+      queuedAutoSaveRef.current = null;
+      if (queuedPlan) {
+        void persistDraftSilently({ force: true, planOverride: queuedPlan });
+      }
+    }
+  }, []);
+
+  const requestImmediateAutoSave = useCallback(() => {
+    window.setTimeout(() => {
+      void persistDraftSilently({ force: true });
+    }, 0);
+  }, [persistDraftSilently]);
+
+  useEffect(() => {
+    if (!editMode || !draftTouched) return;
+    const timer = window.setTimeout(() => {
+      void persistDraftSilently();
+    }, 1400);
+    return () => window.clearTimeout(timer);
+  }, [draftPlan, draftTouched, editMode, persistDraftSilently]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        void persistDraftSilently();
+      }
+    };
+
+    const handlePageHide = () => {
+      void persistDraftSilently();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      void persistDraftSilently();
+    };
+  }, [persistDraftSilently]);
 
   const updateGeneralField = (field, value) => {
     updateDraft((next) => {
@@ -121,6 +451,11 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
       next.general[group] = next.general[group] || {};
       next.general[group][field] = value;
     });
+  };
+
+  const handleEditorFieldBlur = () => {
+    if (!editMode) return;
+    requestImmediateAutoSave();
   };
 
   const updateExpandedSessionField = (field, value) => {
@@ -150,6 +485,7 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
       const [item] = exercises.splice(index, 1);
       exercises.splice(targetIndex, 0, item);
     });
+    requestImmediateAutoSave();
   };
 
   const addExercise = () => {
@@ -159,6 +495,7 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
       const index = session.exercises.length;
       session.exercises.push(normalizeExercise({ id: `custom_${Date.now()}`, sets: '3x8-12' }, index));
     });
+    requestImmediateAutoSave();
   };
 
   const removeExercise = (index) => {
@@ -167,12 +504,15 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
       const session = next.schedule[expandedCard.workoutId];
       session.exercises.splice(index, 1);
     });
+    requestImmediateAutoSave();
   };
 
   const setRestDay = (weekdayKey) => {
     updateDraft((next) => {
       next.weekOrder[weekdayKey] = null;
     });
+    requestImmediateAutoSave();
+    animateDays([weekdayKey], 360);
     setFeedback(`${WEEKDAY_TITLES[weekdayKey]} definido como descanso.`);
   };
 
@@ -192,8 +532,10 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
 
       next.weekOrder[weekdayKey] = sessionId;
     });
+    requestImmediateAutoSave();
     if (swappedFrom) {
       const swappedLabel = swappedTo ? ` e ${swappedTo} foi para ${WEEKDAY_TITLES[swappedFrom]}` : '';
+      animateDays([weekdayKey, swappedFrom], 420);
       setFeedback(`Treino ${sessionId} atribuído para ${WEEKDAY_TITLES[weekdayKey]}${swappedLabel}.`);
       return;
     }
@@ -208,6 +550,8 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
       next.weekOrder[sourceKey] = to;
       next.weekOrder[targetKey] = from;
     });
+    requestImmediateAutoSave();
+    animateDays([sourceKey, targetKey], 420);
     setFeedback(`Dias ${WEEKDAY_TITLES[sourceKey]} e ${WEEKDAY_TITLES[targetKey]} trocados.`);
   };
 
@@ -218,6 +562,9 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
     try {
       const saved = await saveUserPlanDraft(userId, draftPlan);
       setDraftPlan(normalizePlanModel(saved));
+      setDraftTouched(false);
+      setAutoSaveError('');
+      setLastAutoSavedAt(Date.now());
       setFeedback('Rascunho salvo com sucesso.');
     } catch (error) {
       setFeedback(error.message || 'Não foi possível salvar o rascunho.');
@@ -235,6 +582,9 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
       const published = await publishUserPlanDraft(userId);
       const normalized = normalizePlanModel(published);
       setDraftPlan(normalized);
+      setDraftTouched(false);
+      setAutoSaveError('');
+      setLastAutoSavedAt(Date.now());
       onPlanUpdated?.(normalized);
       setEditMode(false);
       setFeedback('Plano publicado com sucesso.');
@@ -254,7 +604,18 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
             {planBadge}
           </span>
           <button
-            onClick={() => setEditMode((value) => !value)}
+            onClick={() =>
+              setEditMode((value) => {
+                const nextValue = !value;
+                if (value) {
+                  void persistDraftSilently({ force: true });
+                }
+                if (nextValue) {
+                  setExpandedWeekday(null);
+                }
+                return nextValue;
+              })
+            }
             className="inline-flex h-10 items-center gap-2 rounded-2xl border border-black/[0.06] bg-white px-4 text-[13px] font-semibold text-gray-700 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-200"
           >
             <Pencil size={15} />
@@ -283,24 +644,32 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
         {editMode && (
           <div className="mt-4 rounded-2xl bg-[#F7F9FD] p-3 dark:bg-white/[0.05]">
             <div className="grid grid-cols-2 gap-2">
-              <InputField label="Foco" value={activePlan.general.focus} onChange={(value) => updateGeneralField('focus', value)} />
+              <InputField
+                label="Foco"
+                value={activePlan.general.focus}
+                onChange={(value) => updateGeneralField('focus', value)}
+                onBlur={handleEditorFieldBlur}
+              />
               <InputField
                 label="TDEE"
                 value={activePlan.general.tdee}
                 type="number"
                 onChange={(value) => updateGeneralField('tdee', Number(value) || 0)}
+                onBlur={handleEditorFieldBlur}
               />
               <InputField
                 label="Calorias min"
                 value={activePlan.general.calorieTarget.min}
                 type="number"
                 onChange={(value) => updateNestedGeneralField('calorieTarget', 'min', Number(value) || 0)}
+                onBlur={handleEditorFieldBlur}
               />
               <InputField
                 label="Calorias max"
                 value={activePlan.general.calorieTarget.max}
                 type="number"
                 onChange={(value) => updateNestedGeneralField('calorieTarget', 'max', Number(value) || 0)}
+                onBlur={handleEditorFieldBlur}
               />
               <InputField
                 label="Água base (L)"
@@ -308,6 +677,7 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
                 type="number"
                 step="0.1"
                 onChange={(value) => updateGeneralField('waterLiters', Number(value) || 0)}
+                onBlur={handleEditorFieldBlur}
               />
               <InputField
                 label="Água rec min"
@@ -315,6 +685,7 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
                 type="number"
                 step="0.1"
                 onChange={(value) => updateNestedGeneralField('waterRecommendedLiters', 'min', Number(value) || 0)}
+                onBlur={handleEditorFieldBlur}
               />
               <InputField
                 label="Água rec max"
@@ -322,12 +693,14 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
                 type="number"
                 step="0.1"
                 onChange={(value) => updateNestedGeneralField('waterRecommendedLiters', 'max', Number(value) || 0)}
+                onBlur={handleEditorFieldBlur}
               />
               <InputField
                 label="Meta de sessões"
                 value={activePlan.general.sessionsPerWeekTarget}
                 type="number"
                 onChange={(value) => updateGeneralField('sessionsPerWeekTarget', Math.max(0, Number(value) || 0))}
+                onBlur={handleEditorFieldBlur}
               />
             </div>
           </div>
@@ -350,35 +723,80 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
             return (
               <div
                 key={card.weekdayKey}
-                draggable={editMode}
-                onDragStart={() => editMode && setDragSource(card.weekdayKey)}
-                onDragOver={(event) => editMode && event.preventDefault()}
-                onDrop={() => {
-                  if (!editMode) return;
-                  swapWeekdays(dragSource, card.weekdayKey);
-                  setDragSource(null);
+                data-weekday-key={card.weekdayKey}
+                ref={(element) => {
+                  if (element) {
+                    cardRefs.current[card.weekdayKey] = element;
+                  } else {
+                    delete cardRefs.current[card.weekdayKey];
+                  }
                 }}
-                onDragEnd={() => setDragSource(null)}
+                style={
+                  isPointerDragging && dragSource === card.weekdayKey
+                    ? {
+                        transform: `translateY(${pointerDragOffsetY}px) scale(1.015)`,
+                        transition: 'transform 90ms linear',
+                        position: 'relative',
+                        zIndex: 30,
+                        boxShadow: '0 16px 36px rgba(10,60,255,0.22)',
+                      }
+                    : isPointerDragging &&
+                        touchDragOverWeekday === card.weekdayKey &&
+                        dragSource &&
+                        dragSource !== card.weekdayKey &&
+                        pointerCardTopsRef.current[card.weekdayKey] !== undefined
+                      ? {
+                          transform: `translateY(${pointerSourceTopRef.current - pointerCardTopsRef.current[card.weekdayKey]}px)`,
+                          transition: 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)',
+                        }
+                      : undefined
+                }
                 className={`rounded-2xl border px-3 py-3 transition-all ${
                   isExpanded
                     ? 'border-[#0A3CFF]/35 bg-[#F4F7FF] dark:border-[#0A3CFF]/45 dark:bg-[#0A3CFF]/20'
                     : 'border-black/[0.06] bg-[#F7F9FD] dark:border-white/[0.08] dark:bg-white/[0.04]'
-                } ${isDragActive ? 'opacity-70' : ''}`}
+                } ${isDragActive ? 'opacity-70' : ''} ${
+                  touchDragOverWeekday === card.weekdayKey && dragSource && dragSource !== card.weekdayKey
+                    ? 'ring-2 ring-[#0A3CFF]/45'
+                    : ''
+                } ${
+                  animatedWeekdays.includes(card.weekdayKey)
+                    ? 'ring-2 ring-[#0A3CFF]/35 shadow-[0_10px_24px_rgba(10,60,255,0.14)]'
+                    : ''
+                }`}
               >
-                <button onClick={() => setExpandedWeekday(card.weekdayKey)} className="flex w-full items-center justify-between text-left">
+                <div className="flex w-full items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {editMode && <GripVertical size={14} className="text-gray-400" />}
-                    <div>
+                    {editMode && (
+                      <button
+                        type="button"
+                        aria-label={`Arrastar treino de ${card.weekdayLabel}`}
+                        onClick={(event) => event.preventDefault()}
+                        onPointerDown={(event) => handlePointerDragStart(card.weekdayKey, event)}
+                        onPointerMove={handlePointerDragMove}
+                        onPointerUp={handlePointerDragEnd}
+                        onPointerCancel={handlePointerDragEnd}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 active:bg-[#0A3CFF]/10"
+                        style={{ touchAction: 'none' }}
+                      >
+                        <GripVertical size={14} className="text-gray-400" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedWeekday((current) => (current === card.weekdayKey ? null : card.weekdayKey))}
+                      className="text-left"
+                    >
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{card.weekdayLabel}</p>
                       <p className="mt-1 text-[16px] font-bold text-gray-950 dark:text-white">
                         {card.isRest ? 'Descanso' : `${card.workoutId} - ${card.session?.name || 'Treino'}`}
                       </p>
-                    </div>
+                    </button>
                   </div>
                   <span className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">
                     {card.isRest ? 'OFF' : `${exerciseCount} itens`}
                   </span>
-                </button>
+                </div>
 
                 {editMode && isExpanded && (
                   <div className="mt-3 space-y-3">
@@ -404,17 +822,20 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
                             label="Nome do treino"
                             value={card.session?.name || ''}
                             onChange={(value) => updateExpandedSessionField('name', value)}
+                            onBlur={handleEditorFieldBlur}
                           />
                           <InputField
                             label="Tipo"
                             value={card.session?.type || ''}
                             onChange={(value) => updateExpandedSessionField('type', value)}
+                            onBlur={handleEditorFieldBlur}
                           />
                         </div>
 
                         <textarea
                           value={card.session?.summary || ''}
                           onChange={(event) => updateExpandedSessionField('summary', event.target.value)}
+                          onBlur={handleEditorFieldBlur}
                           className="min-h-[68px] w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-[13px] text-gray-700 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300"
                           placeholder="Resumo do treino"
                         />
@@ -435,11 +856,13 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
                                   label="Exercício"
                                   value={exercise.name || ''}
                                   onChange={(value) => updateExerciseField(index, 'name', value)}
+                                  onBlur={handleEditorFieldBlur}
                                 />
                                 <SelectField
                                   label="Categoria"
                                   value={exercise.type || 'strength'}
                                   onChange={(value) => updateExerciseField(index, 'type', value)}
+                                  onBlur={handleEditorFieldBlur}
                                   options={[
                                     { value: 'strength', label: 'Força' },
                                     { value: 'cardio', label: 'Cardio' },
@@ -453,11 +876,13 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
                                   onChange={(value) =>
                                     updateExerciseField(index, exercise.type === 'cardio' ? 'target' : 'sets', value)
                                   }
+                                  onBlur={handleEditorFieldBlur}
                                 />
                                 <InputField
                                   label="Nota"
                                   value={exercise.note || ''}
                                   onChange={(value) => updateExerciseField(index, 'note', value)}
+                                  onBlur={handleEditorFieldBlur}
                                 />
                               </div>
                               <div className="mt-2 flex gap-2">
@@ -521,6 +946,24 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
         )}
 
         {feedback && <p className="mt-3 text-[13px] text-gray-600 dark:text-gray-300">{feedback}</p>}
+        {editMode && (
+          <p
+            className={`mt-2 text-[12px] ${
+              autoSaveError ? 'text-rose-600 dark:text-rose-300' : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            {autoSaveError
+              ? autoSaveError
+              : isAutoSaving
+                ? 'Salvando automaticamente...'
+                : lastAutoSavedAt
+                  ? `Rascunho salvo automaticamente às ${new Date(lastAutoSavedAt).toLocaleTimeString('pt-BR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`
+                  : 'Autosave ativo durante a edição.'}
+          </p>
+        )}
       </section>
     </div>
   );
@@ -538,7 +981,7 @@ function GeneralCard({ icon, label, value }) {
   );
 }
 
-function InputField({ label, value, onChange, type = 'text', step }) {
+function InputField({ label, value, onChange, onBlur, type = 'text', step }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{label}</span>
@@ -547,19 +990,21 @@ function InputField({ label, value, onChange, type = 'text', step }) {
         step={step}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
         className="h-10 w-full rounded-xl border border-black/[0.08] bg-white px-3 text-[13px] text-gray-800 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-100"
       />
     </label>
   );
 }
 
-function SelectField({ label, value, onChange, options }) {
+function SelectField({ label, value, onChange, onBlur, options }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
         className="h-10 w-full rounded-xl border border-black/[0.08] bg-white px-3 text-[13px] text-gray-800 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-100"
       >
         {options.map((option) => (

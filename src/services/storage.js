@@ -239,12 +239,14 @@ export const getWorkoutSessions = (entry) => {
 
 export const hasWorkoutSessions = (entry) => getWorkoutSessions(entry).length > 0;
 
-export const saveWorkoutLog = async (workoutId, exerciseId, payload) => {
+const isValidDateKey = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+
+export const saveWorkoutLog = async (workoutId, exerciseId, payload, dateKeyOverride = null) => {
   try {
     ensureSupabaseReady();
     const userId = ensureActiveUserId();
-    const today = getLocalDateKey();
-    const dayEntry = await getRemoteDayEntry(today);
+    const targetDateKey = isValidDateKey(dateKeyOverride) ? String(dateKeyOverride) : getLocalDateKey();
+    const dayEntry = await getRemoteDayEntry(targetDateKey);
 
     if (!dayEntry.sessions[workoutId]) {
       dayEntry.sessions[workoutId] = {
@@ -260,8 +262,8 @@ export const saveWorkoutLog = async (workoutId, exerciseId, payload) => {
     };
     dayEntry.sessions[workoutId].updatedAt = Date.now();
 
-    const persisted = await upsertDayRow(userId, today, dayEntry);
-    setCachedDayEntry(today, persisted);
+    const persisted = await upsertDayRow(userId, targetDateKey, dayEntry);
+    setCachedDayEntry(targetDateKey, persisted);
     clearStorageError();
     return true;
   } catch (error) {

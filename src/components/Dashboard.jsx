@@ -1,8 +1,11 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+﻿import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
   Sun,
   Moon,
   Sparkles,
+  CircleCheckBig,
+  CircleDashed,
+  Play,
   Download,
   LogOut,
   User,
@@ -111,6 +114,9 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallAvailable, setIsInstallAvailable] = useState(false);
   const [completedWeekdays, setCompletedWeekdays] = useState({});
+  const [weeklyProgress, setWeeklyProgress] = useState({});
+  const weekOrder = currentPlan.weekOrder || DEFAULT_WEEK_ORDER;
+  const weekDateByWeekday = getCurrentWeekDateKeysByWeekday();
 
   useEffect(() => {
     setCurrentPlan(normalizePlanModel(plan));
@@ -202,6 +208,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
   useEffect(() => {
     if (!user?.id) {
       setCompletedWeekdays({});
+      setWeeklyProgress({});
       return;
     }
 
@@ -222,7 +229,20 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
         return accumulator;
       }, {});
 
+      const nextWeeklyProgress = WEEKDAY_VIEW.reduce((accumulator, weekdayKey) => {
+        const dateKey = weekDateByWeekday[weekdayKey];
+        const workoutId = weekOrder[weekdayKey] || null;
+        const dayEntry = history[dateKey];
+        const workoutSession = workoutId ? dayEntry?.sessions?.[workoutId] : null;
+        accumulator[weekdayKey] = {
+          hasAnySession: hasWorkoutSessions(dayEntry),
+          loggedExercises: Object.keys(workoutSession?.exercises || {}).length,
+        };
+        return accumulator;
+      }, {});
+
       setCompletedWeekdays(nextCompleted);
+      setWeeklyProgress(nextWeeklyProgress);
     };
 
     void loadWeeklyCompletion();
@@ -241,7 +261,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
       window.removeEventListener('focus', loadWeeklyCompletion);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [user?.id, activeTab, isExecuting]);
+  }, [activeTab, isExecuting, user?.id, weekOrder]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -251,7 +271,6 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     setIsInstallAvailable(false);
   };
 
-  const weekOrder = currentPlan.weekOrder || DEFAULT_WEEK_ORDER;
   const selectedWorkoutId = weekOrder[selectedWeekday] || null;
   const activeWorkout = selectedWorkoutId ? currentPlan.schedule[selectedWorkoutId] : null;
   const todayWeekdayKey = getWeekdayKeyFromDate();
@@ -365,11 +384,11 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                         {slot.label}
                       </span>
                       <span className={`mt-1 text-[18px] font-bold leading-none ${isTodayCard && !isActive ? 'text-gray-950 dark:text-white' : ''}`}>
-                        {slot.workoutId || '•'}
+                        {slot.workoutId || '-'}
                       </span>
                       <span className="mt-1 flex h-5 items-center justify-center">
                         {isRestDay ? (
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">off</span>
+                          <span className="h-1.5 w-1.5 rounded-full bg-gray-300 dark:bg-white/20" />
                         ) : isCompletedThisWeek ? (
                           <span
                             className={`h-2 w-2 rounded-full ${
@@ -420,6 +439,11 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
             onStartWorkout={() => setIsExecuting(true)}
             isInstallAvailable={isInstallAvailable}
             selectedWorkoutId={selectedWorkoutId}
+            selectedWeekday={selectedWeekday}
+            selectedDateKey={weekDateByWeekday[selectedWeekday]}
+            todayWeekdayKey={todayWeekdayKey}
+            selectedWeekdayCompleted={Boolean(completedWeekdays[selectedWeekday])}
+            selectedWeekdayProgress={weeklyProgress[selectedWeekday] || { hasAnySession: false, loggedExercises: 0 }}
           />
         )}
 
@@ -460,9 +484,179 @@ function PageFallback({ label }) {
   );
 }
 
-function HomeContent({ activeWorkout, onInstall, onStartWorkout, isInstallAvailable, selectedWorkoutId }) {
+function getDayStatus({
+  activeWorkout,
+  isTodaySelected,
+  selectedWeekdayCompleted,
+  loggedExercises,
+  targetExercises,
+}) {
+  if (!activeWorkout) {
+    return {
+      title: 'Dia de descanso',
+      description: 'Recupere, hidrate e prepare o proximo bloco da semana.',
+      icon: BedDouble,
+      tone: 'rest',
+    };
+  }
+
+  if (isTodaySelected) {
+    if (selectedWeekdayCompleted || (targetExercises > 0 && loggedExercises >= targetExercises)) {
+      return {
+        title: 'Treino concluido',
+        description: 'Sessao finalizada hoje. Otimo trabalho.',
+        icon: CircleCheckBig,
+        tone: 'done',
+      };
+    }
+
+    if (loggedExercises > 0) {
+      return {
+        title: 'Em andamento',
+        description: `${loggedExercises} item${loggedExercises === 1 ? '' : 's'} registrado${loggedExercises === 1 ? '' : 's'} hoje.`,
+        icon: Play,
+        tone: 'progress',
+      };
+    }
+
+    return {
+      title: 'Ainda nao iniciado',
+      description: 'Comece o treino para registrar sua evolucao.',
+      icon: CircleDashed,
+      tone: 'idle',
+    };
+  }
+
+  if (selectedWeekdayCompleted) {
+    return {
+      title: 'Treino concluido',
+      description: 'Voce ja registrou essa sessao no historico semanal.',
+      icon: CircleCheckBig,
+      tone: 'done',
+    };
+  }
+
+  return {
+    title: 'Treino planejado',
+    description: 'Esse dia esta pronto para quando voce quiser executar.',
+    icon: CircleDashed,
+    tone: 'idle',
+  };
+}
+
+function HomeContent({
+  activeWorkout,
+  onInstall,
+  onStartWorkout,
+  isInstallAvailable,
+  selectedWorkoutId,
+  selectedWeekday,
+  selectedDateKey,
+  todayWeekdayKey,
+  selectedWeekdayCompleted,
+  selectedWeekdayProgress,
+}) {
+  const isTodaySelected = selectedWeekday === todayWeekdayKey;
+  const targetExercises = activeWorkout?.exercises?.length || 0;
+  const loggedExercises = selectedWeekdayProgress?.loggedExercises || 0;
+  const isWorkoutConcluded =
+    Boolean(activeWorkout) &&
+    (selectedWeekdayCompleted || (targetExercises > 0 && loggedExercises >= targetExercises));
+  const dayStatus = getDayStatus({
+    activeWorkout,
+    isTodaySelected,
+    selectedWeekdayCompleted,
+    loggedExercises,
+    targetExercises,
+  });
+  const DayStatusIcon = dayStatus.icon;
+  const dayStatusToneClass =
+    dayStatus.tone === 'done'
+      ? 'bg-emerald-500/14 text-emerald-600 dark:bg-emerald-500/18 dark:text-emerald-300'
+      : dayStatus.tone === 'progress'
+        ? 'bg-[#0A3CFF]/12 text-[#0A3CFF] dark:bg-[#0A3CFF]/22 dark:text-[#AFC5FF]'
+        : 'bg-gray-500/14 text-gray-600 dark:bg-white/[0.1] dark:text-gray-300';
+
   return (
     <>
+      <section className="mb-4">
+        <div className="mb-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0A3CFF] dark:text-[#8FB1FF]">Plano do dia</p>
+        </div>
+        {activeWorkout ? (
+          <TrainingCard workout={activeWorkout} onStart={onStartWorkout} />
+        ) : (
+          <div className="rounded-[28px] border border-black/[0.05] bg-white px-5 py-6 text-center shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
+              <BedDouble size={20} />
+            </div>
+            <p className="mt-3 text-[20px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">Dia de descanso</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
+              Aproveite para recuperar, hidratar e preparar o proximo bloco.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {!isWorkoutConcluded && (
+        <section className="mb-4 rounded-[24px] border border-black/[0.05] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+          <div className="flex items-center gap-3">
+            <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${dayStatusToneClass}`}>
+              <DayStatusIcon size={18} />
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Status do dia</p>
+              <p className="mt-0.5 text-[18px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{dayStatus.title}</p>
+            </div>
+          </div>
+          <p className="mt-2 text-[13px] leading-relaxed text-gray-600 dark:text-gray-400">{dayStatus.description}</p>
+        </section>
+      )}
+
+      <section className="mb-5">
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Registro rapido</p>
+            <h3 className="mt-1 text-[22px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">Treino diario</h3>
+          </div>
+        </div>
+        {activeWorkout ? (
+          <WeightLog
+            exercises={activeWorkout.exercises || []}
+            workoutId={selectedWorkoutId || 'REST'}
+            targetDateKey={selectedDateKey}
+          />
+        ) : (
+          <div className="rounded-[20px] border border-black/[0.05] bg-white px-4 py-5 text-center text-[13px] text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400">
+            Sem treino atribuido para este dia.
+          </div>
+        )}
+      </section>
+
+      <section className="mb-6">
+        <div className="overflow-hidden rounded-[26px] border border-black/[0.05] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+          <div className="flex items-start gap-3 px-5 pb-3 pt-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
+              <Sparkles size={18} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Objetivo principal</p>
+              <p className="mt-2 text-[30px] font-bold leading-[1.02] tracking-[-0.05em] text-gray-950 dark:text-white">
+                {activeWorkout?.type || 'Recuperacao'}
+              </p>
+            </div>
+          </div>
+          <div className="border-t border-black/[0.05] px-5 py-3 dark:border-white/[0.06]">
+            <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-400">
+              {OBJECTIVE_COPY[selectedWorkoutId] ||
+                (activeWorkout
+                  ? 'Mantenha consistencia e boa execucao em cada serie.'
+                  : 'Dia leve para recuperar e manter consistencia.')}
+            </p>
+          </div>
+        </div>
+      </section>
+
       {isInstallAvailable && (
         <section className="mb-4">
           <button
@@ -491,65 +685,6 @@ function HomeContent({ activeWorkout, onInstall, onStartWorkout, isInstallAvaila
           </button>
         </section>
       )}
-
-      <section className="mb-4">
-        <div className="mb-3">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0A3CFF] dark:text-[#8FB1FF]">Plano do dia</p>
-        </div>
-        {activeWorkout ? (
-          <TrainingCard workout={activeWorkout} onStart={onStartWorkout} />
-        ) : (
-          <div className="rounded-[28px] border border-black/[0.05] bg-white px-5 py-6 text-center shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
-              <BedDouble size={20} />
-            </div>
-            <p className="mt-3 text-[20px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">Dia de descanso</p>
-            <p className="mt-2 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
-              Aproveite para recuperar, hidratar e preparar o próximo bloco.
-            </p>
-          </div>
-        )}
-      </section>
-
-      <section className="mb-6">
-        <div className="overflow-hidden rounded-[26px] border border-black/[0.05] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
-          <div className="flex items-start gap-3 px-5 pb-3 pt-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
-              <Sparkles size={18} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Objetivo principal</p>
-              <p className="mt-2 text-[30px] font-bold leading-[1.02] tracking-[-0.05em] text-gray-950 dark:text-white">
-                {activeWorkout?.type || 'Recuperacao'}
-              </p>
-            </div>
-          </div>
-          <div className="border-t border-black/[0.05] px-5 py-3 dark:border-white/[0.06]">
-            <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-400">
-              {OBJECTIVE_COPY[selectedWorkoutId] ||
-                (activeWorkout
-                  ? 'Mantenha consistência e boa execução em cada série.'
-                  : 'Dia leve para recuperar e manter consistência.')}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-3 flex items-end justify-between">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Registro rapido</p>
-            <h3 className="mt-1 text-[22px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">Treino diário</h3>
-          </div>
-        </div>
-        {activeWorkout ? (
-          <WeightLog exercises={activeWorkout.exercises || []} workoutId={selectedWorkoutId || 'REST'} />
-        ) : (
-          <div className="rounded-[20px] border border-black/[0.05] bg-white px-4 py-5 text-center text-[13px] text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400">
-            Sem treino atribuído para este dia.
-          </div>
-        )}
-      </section>
     </>
   );
 }

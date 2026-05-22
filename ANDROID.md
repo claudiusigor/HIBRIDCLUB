@@ -36,6 +36,17 @@ O APK de teste fica em:
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
+## Gerar APK pelo GitHub
+
+O workflow `Build Android APK` roda automaticamente a cada push na branch `main`.
+
+Para baixar o APK gerado:
+
+1. Abra o repositorio no GitHub.
+2. Entre em `Actions`.
+3. Abra a execucao `Build Android APK`.
+4. Baixe o artefato `hibrid-club-debug-apk`.
+
 ## Depois de mudar o app
 
 Sempre que alterar telas, estilos ou logica do webapp, rode:

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hibrid Club</string>
+    <string name="title_activity_main">Hibrid Club</string>
+    <string name="package_name">com.hibridclub.app</string>
+    <string name="custom_url_scheme">com.hibridclub.app</string>
+</resources>

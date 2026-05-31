@@ -36,9 +36,9 @@ const strength = (id, name, sets, note = '') => ({ id, name, sets, type: 'streng
 const cardio = (id, name, target, note = '') => ({ id, name, target, type: 'cardio', ...(note ? { note } : {}) });
 
 const basicTemplate = clone(publicPlanTemplate);
-basicTemplate.metadata = buildMetadata('basic', 'Plano Hibrido Basico');
-basicTemplate.general.focus = 'Base de forca + corrida leve + consistencia';
-basicTemplate.general.objective = 'Criar consistencia semanal com tecnica, controle de carga e cardio progressivo.';
+basicTemplate.metadata = buildMetadata('basic', 'Plano Híbrido Básico');
+basicTemplate.general.focus = 'Base de força + corrida leve + consistência';
+basicTemplate.general.objective = 'Criar consistência semanal com técnica, controle de carga e cardio progressivo.';
 basicTemplate.general.sessionsPerWeekTarget = 5;
 basicTemplate.schedule.A = {
   id: 'A',
@@ -64,7 +64,7 @@ basicTemplate.schedule.B = {
   name: 'Superiores Base',
   type: 'Forca Hibrida',
   themeColor: 'primary-400',
-  summary: 'Empurrar e puxar com volume moderado e foco em execucao.',
+  summary: 'Empurrar e puxar com volume moderado e foco em execução.',
   exercises: [
     strength('b1', 'Supino reto com halter', '4x8-10'),
     strength('b2', 'Supino inclinado', '3x8-10'),
@@ -115,7 +115,7 @@ basicTemplate.schedule.E = {
   name: 'Superiores Volume',
   type: 'Forca Hibrida',
   themeColor: 'primary-400',
-  summary: 'Costas e ombros com alto controle de tecnica.',
+  summary: 'Costas e ombros com alto controle de técnica.',
   exercises: [
     strength('e1', 'Barra assistida ou puxada neutra', '4x8-10'),
     strength('e2', 'Remada unilateral', '3x10 por lado'),
@@ -146,7 +146,7 @@ basicTemplate.schedule.F = {
 applySessionIdentity(basicTemplate);
 
 const intermediateTemplate = clone(publicPlanTemplate);
-intermediateTemplate.metadata = buildMetadata('intermediate', 'Plano Hibrido Intermediario');
+intermediateTemplate.metadata = buildMetadata('intermediate', 'Plano Híbrido Intermediário');
 intermediateTemplate.general.focus = 'Forca hibrida com corrida estruturada';
 intermediateTemplate.general.objective = 'Evoluir carga, densidade de treino e capacidade de corrida com controle.';
 intermediateTemplate.general.sessionsPerWeekTarget = 6;
@@ -192,7 +192,7 @@ intermediateTemplate.schedule.C = {
   name: 'Tempo Run',
   type: 'Cardio',
   themeColor: 'cyan-400',
-  summary: 'Ritmo sustentado com foco em tecnica de respiracao e postura.',
+  summary: 'Ritmo sustentado com foco em técnica de respiração e postura.',
   exercises: [
     cardio('ic1', 'Aquecimento leve', '8-10 min'),
     cardio('ic2', 'Tempo run', '3x8 min (2 min leve)'),
@@ -241,7 +241,7 @@ intermediateTemplate.schedule.E = {
 intermediateTemplate.schedule.F = {
   id: 'F',
   day: DAY_LABELS.F,
-  name: 'Longao Intermediario',
+  name: 'Longão Intermediário',
   type: 'Cardio',
   themeColor: 'cyan-400',
   summary: 'Corrida longa com bloco final mais forte.',
@@ -257,8 +257,8 @@ intermediateTemplate.schedule.F = {
 applySessionIdentity(intermediateTemplate);
 
 const advancedTemplate = clone(publicPlanTemplate);
-advancedTemplate.metadata = buildMetadata('advanced', 'Plano Hibrido Avancado');
-advancedTemplate.general.focus = 'Alta performance em forca e corrida';
+advancedTemplate.metadata = buildMetadata('advanced', 'Plano Híbrido Avançado');
+advancedTemplate.general.focus = 'Alta performance em força e corrida';
 advancedTemplate.general.objective = 'Maximizar performance com alto controle de fadiga e progressao semanal.';
 advancedTemplate.general.sessionsPerWeekTarget = 6;
 advancedTemplate.schedule.A = {
@@ -300,7 +300,7 @@ advancedTemplate.schedule.B = {
 advancedTemplate.schedule.C = {
   id: 'C',
   day: DAY_LABELS.C,
-  name: 'Tempo Run Avancado',
+  name: 'Tempo Run Avançado',
   type: 'Cardio',
   themeColor: 'cyan-400',
   summary: 'Dia de limiar com blocos de tempo e estabilidade.',
@@ -352,10 +352,10 @@ advancedTemplate.schedule.E = {
 advancedTemplate.schedule.F = {
   id: 'F',
   day: DAY_LABELS.F,
-  name: 'Longao Avancado',
+  name: 'Longão Avançado',
   type: 'Cardio',
   themeColor: 'cyan-400',
-  summary: 'Longao com progressao e bloco final forte.',
+  summary: 'Longão com progressão e bloco final forte.',
   exercises: [
     cardio('af1', 'Corrida longa', '70-90 min'),
     cardio('af2', 'Bloco final forte', '12-15 min'),
@@ -370,23 +370,23 @@ applySessionIdentity(advancedTemplate);
 export const progressivePlanTemplates = [
   {
     slug: 'hibrid-club-basic',
-    name: 'Basico',
+    name: 'Básico',
     level: 'basic',
     description: 'Entrada progressiva com volume completo e cardio controlado.',
     plan_data: basicTemplate,
   },
   {
     slug: 'hibrid-club-intermediate',
-    name: 'Intermediario',
+    name: 'Intermediário',
     level: 'intermediate',
     description: 'Mais intensidade, mais densidade de treino e corrida estruturada.',
     plan_data: intermediateTemplate,
   },
   {
     slug: 'hibrid-club-advanced',
-    name: 'Avancado',
+    name: 'Avançado',
     level: 'advanced',
-    description: 'Modelo de alta performance com forca e corrida em alto nivel.',
+    description: 'Modelo de alta performance com força e corrida em alto nível.',
     plan_data: advancedTemplate,
   },
 ];

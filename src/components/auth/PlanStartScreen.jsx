@@ -54,11 +54,11 @@ export default function PlanStartScreen({
           </p>
         </div>
 
-        <div className="mt-8 rounded-[30px] border border-black/[0.08] bg-white/92 p-5 shadow-[0_20px_44px_rgba(15,23,42,0.1)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-[0_20px_44px_rgba(0,0,0,0.3)]">
+        <div className="mt-8 rounded-[22px] border border-black/[0.06] bg-white/92 p-5 shadow-[0_8px_14px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
           <button
             onClick={onSelectImport}
             disabled={isBusy}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#0A3CFF] px-4 text-[16px] font-semibold text-white shadow-[0_16px_30px_rgba(10,60,255,0.24)] disabled:opacity-50"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#0A3CFF] px-4 text-[16px] font-semibold text-white shadow-[0_8px_14px_rgba(10,60,255,0.2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileUp size={18} />
             Importar minha ficha
@@ -67,14 +67,14 @@ export default function PlanStartScreen({
           <button
             onClick={onSelectDefault}
             disabled={isBusy}
-            className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.1] bg-[#F7F9FD] px-4 text-[15px] font-semibold text-gray-800 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-200"
+            className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-[#F7F9FD] px-4 text-[15px] font-semibold text-gray-800 transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-200 dark:hover:bg-white/[0.07]"
           >
             <ListChecks size={18} />
             Usar plano padrão
           </button>
 
           <div className="mt-4 min-h-[42px]">
-            <p className="text-center text-[13px] leading-relaxed text-gray-700 dark:text-gray-400">
+            <p role={message ? 'status' : undefined} className="text-center text-[13px] leading-relaxed text-gray-700 dark:text-gray-400">
               {message || 'Depois você poderá editar dias, treinos e corrida do jeito que preferir.'}
             </p>
           </div>

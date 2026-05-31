@@ -2,10 +2,8 @@
 import {
   Sun,
   Moon,
-  Sparkles,
   CircleCheckBig,
   CircleDashed,
-  Play,
   Download,
   LogOut,
   User,
@@ -26,7 +24,6 @@ const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const NutritionPage = lazy(() => import('./pages/NutritionPage'));
 const PlanPage = lazy(() => import('./pages/PlanPage'));
-const WorkoutExecution = lazy(() => import('./WorkoutExecution'));
 const THEME_STORAGE_KEY = 'hyperactive-theme';
 const DARK_THEME_COLOR = '#0A0D14';
 const LIGHT_THEME_COLOR = '#F5F7FB';
@@ -44,7 +41,7 @@ const WEEKDAY_LABELS = {
 };
 
 const OBJECTIVE_COPY = {
-  A: 'Priorize carga, controle e potencia nas pernas.',
+  A: 'Priorize carga, controle e potência nas pernas.',
   B: 'Empurre forte e estabilize o tronco no puxar.',
   C: 'Sustente o ritmo e firme o core a cada bloco.',
   D: 'Ative posteriores e glúteos com execução sólida.',
@@ -109,7 +106,6 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     const todayKey = getWeekdayKeyFromDate();
     return todayKey;
   });
-  const [isExecuting, setIsExecuting] = useState(false);
   const [isDark, setIsDark] = useState(getInitialTheme);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallAvailable, setIsInstallAvailable] = useState(false);
@@ -261,7 +257,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
       window.removeEventListener('focus', loadWeeklyCompletion);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [activeTab, isExecuting, user?.id, weekOrder]);
+  }, [activeTab, user?.id, weekOrder]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -296,24 +292,17 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     return null;
   }, [activeTab, currentPlan, user?.id]);
 
-  if (isExecuting) {
-    return (
-      <Suspense fallback={<PageFallback label="Carregando treino" />}>
-        <WorkoutExecution workout={activeWorkout} onClose={() => setIsExecuting(false)} targetDateKey={weekDateByWeekday[selectedWeekday]} />
-      </Suspense>
-    );
-  }
-
   return (
-    <div className="min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white">
-      <header className="sticky top-0 z-40 border-b border-black/[0.04] bg-[#F5F7FB]/94 px-5 pb-4 pt-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[#0A0D14]/92">
+    <div className="hc-app-shell min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white">
+      <header className="hc-topbar sticky top-0 z-40 border-b border-black/[0.04] bg-[#F5F7FB]/94 pb-4 pt-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[#0A0D14]/92">
+        <div className="mx-auto w-full max-w-[430px] px-5">
         <div className="mb-3 grid grid-cols-[44px_1fr_44px] items-center">
           <div>
             {user && onSignOut ? (
               <button
                 onClick={onSignOut}
                 aria-label="Sair"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-colors dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
+                className="hc-icon-button flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_6px_8px_rgba(15,23,42,0.05)] transition-colors hover:text-[#0A3CFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
               >
                 <LogOut size={17} />
               </button>
@@ -335,7 +324,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
           <button
             onClick={() => setIsDark(!isDark)}
             aria-label={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-colors dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
+            className="hc-icon-button flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_6px_8px_rgba(15,23,42,0.05)] transition-colors hover:text-[#0A3CFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
           >
             {isDark ? <Sun size={17} /> : <Moon size={17} />}
           </button>
@@ -344,18 +333,18 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
         {activeTab === TABS.HOME && (
           <>
             <div className="mb-2 flex items-center justify-between px-1">
-              <p className="text-[12px] font-medium tracking-[-0.01em] text-gray-500 dark:text-gray-400">{greeting}</p>
+              <p className="text-[0.8125rem] font-medium leading-5 text-gray-500 dark:text-gray-400">{greeting}</p>
               {onEditProfile && (
                 <button
                   onClick={onEditProfile}
                   aria-label="Editar perfil"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-black/[0.04] hover:text-[#0A3CFF] dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-[#AFC5FF]"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-black/[0.04] hover:text-[#0A3CFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-[#AFC5FF]"
                 >
                   <User size={16} />
                 </button>
               )}
             </div>
-            <div className="rounded-[26px] bg-black/[0.04] p-1.5 dark:bg-white/[0.06]">
+            <div className="hc-week-rail rounded-[26px] bg-black/[0.04] p-1.5 dark:bg-white/[0.06]">
               <div className="grid grid-cols-7 gap-1.5">
                 {daySlots.map((slot) => {
                   const isActive = selectedWeekday === slot.weekdayKey;
@@ -368,22 +357,23 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                     <button
                       key={slot.weekdayKey}
                       onClick={() => setSelectedWeekday(slot.weekdayKey)}
-                      className={`flex min-h-[72px] flex-col items-center justify-center rounded-[22px] px-1.5 py-2 transition-all duration-300 ${
+                      aria-pressed={isActive}
+                      className={`hc-week-day flex min-h-[72px] flex-col items-center justify-center rounded-[20px] px-1.5 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] ${
                         isActive
-                          ? 'bg-white text-[#0A3CFF] shadow-[0_10px_22px_rgba(10,60,255,0.14)] dark:bg-[#0A3CFF] dark:text-white'
+                          ? 'hc-day-active bg-white text-[#0A3CFF] shadow-[0_6px_8px_rgba(10,60,255,0.12)] dark:bg-[#0A3CFF] dark:text-white'
                           : isTodayCard
                             ? 'text-gray-600 dark:text-gray-300'
                             : 'text-gray-500 dark:text-gray-400'
                       }`}
                     >
                       <span
-                        className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                        className={`hc-label ${
                           isActive ? 'opacity-80' : isTodayCard ? 'text-[#0A3CFF] dark:text-[#AFC5FF]' : 'opacity-70'
                         }`}
                       >
                         {slot.label}
                       </span>
-                      <span className={`mt-1 text-[18px] font-bold leading-none ${isTodayCard && !isActive ? 'text-gray-950 dark:text-white' : ''}`}>
+                      <span className={`hc-numeric mt-1 text-[1rem] font-bold leading-none ${isTodayCard && !isActive ? 'text-gray-950 dark:text-white' : ''}`}>
                         {slot.workoutId || '-'}
                       </span>
                       <span className="mt-1 flex h-5 items-center justify-center">
@@ -391,7 +381,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                           <span className="h-1.5 w-1.5 rounded-full bg-gray-300 dark:bg-white/20" />
                         ) : isCompletedThisWeek ? (
                           <span
-                            className={`h-2 w-2 rounded-full ${
+                            className={`hc-complete-dot h-2 w-2 rounded-full ${
                               isActive
                                 ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.2)]'
                                 : 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]'
@@ -408,7 +398,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                             height="80"
                             className={`h-10 w-10 object-contain ${
                               isActive ? (isDark ? 'brightness-0 invert' : 'opacity-100') : 'opacity-70 dark:opacity-85'
-                            }`}
+                            } hc-cardio-mark`}
                           />
                         ) : (
                           <span
@@ -429,14 +419,14 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
             </div>
           </>
         )}
+        </div>
       </header>
 
-      <div className="px-5 pt-5">
+      <main className="mx-auto w-full max-w-[430px] px-5 pt-5">
         {activeTab === TABS.HOME && (
           <HomeContent
             activeWorkout={activeWorkout}
             onInstall={handleInstall}
-            onStartWorkout={() => setIsExecuting(true)}
             isInstallAvailable={isInstallAvailable}
             selectedWorkoutId={selectedWorkoutId}
             selectedWeekday={selectedWeekday}
@@ -448,10 +438,10 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
         )}
 
         {activeTab !== TABS.HOME && <Suspense fallback={<PageFallback label="Carregando tela" />}>{currentTabContent}</Suspense>}
-      </div>
+      </main>
 
-      <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2">
-        <nav className="rounded-[28px] border border-black/[0.04] bg-white/92 px-3 py-2 shadow-[0_18px_40px_rgba(15,23,42,0.16)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#10141E]/88 dark:shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
+      <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2 px-1">
+        <nav className="hc-dock rounded-[24px] border border-black/[0.04] bg-white/92 px-3 py-2 shadow-[0_8px_12px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#10141E]/88 dark:shadow-[0_8px_12px_rgba(0,0,0,0.32)]">
           <div className="grid grid-cols-5 gap-1">
             {DOCK_ITEMS.map((item) => {
               const isActive = activeTab === item.id;
@@ -460,12 +450,13 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
                   aria-label={item.label}
-                  className={`relative flex min-h-[58px] flex-col items-center justify-center rounded-[20px] px-1 py-2 transition-all duration-300 ${
-                    isActive ? 'bg-[#0A3CFF] text-white shadow-[0_12px_28px_rgba(10,60,255,0.28)]' : 'text-gray-500 dark:text-gray-400'
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`relative flex min-h-[58px] flex-col items-center justify-center rounded-[18px] px-1 py-2 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] ${
+                    isActive ? 'bg-[#0A3CFF] text-white shadow-[0_6px_8px_rgba(10,60,255,0.2)]' : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
                   <item.Icon size={item.iconSize} strokeWidth={1.9} className={`${isActive ? 'text-white' : 'text-[#546173] dark:text-[#9AA7BC]'}`} />
-                  <span className={`mt-1 text-[11px] font-semibold tracking-[-0.01em] ${isActive ? 'text-white/92' : ''}`}>{item.label}</span>
+                  <span className={`mt-1 text-[0.6875rem] font-semibold leading-4 ${isActive ? 'text-white/92' : ''}`}>{item.label}</span>
                 </button>
               );
             })}
@@ -478,7 +469,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
 
 function PageFallback({ label }) {
   return (
-    <div className="flex min-h-[220px] items-center justify-center rounded-[28px] border border-black/[0.05] bg-white text-[14px] font-semibold text-gray-500 shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400 dark:shadow-none">
+    <div className="flex min-h-[220px] items-center justify-center rounded-3xl border border-black/[0.05] bg-white text-[0.875rem] font-semibold text-gray-500 shadow-[0_6px_8px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400 dark:shadow-none">
       {label}
     </div>
   );
@@ -494,7 +485,7 @@ function getDayStatus({
   if (!activeWorkout) {
     return {
       title: 'Dia de descanso',
-      description: 'Recupere, hidrate e prepare o proximo bloco da semana.',
+      description: 'Recupere, hidrate e prepare o próximo bloco da semana.',
       icon: BedDouble,
       tone: 'rest',
     };
@@ -503,8 +494,8 @@ function getDayStatus({
   if (isTodaySelected) {
     if (selectedWeekdayCompleted || (targetExercises > 0 && loggedExercises >= targetExercises)) {
       return {
-        title: 'Treino concluido',
-        description: 'Sessao finalizada hoje. Otimo trabalho.',
+        title: 'Treino concluído',
+        description: 'Sessão finalizada hoje. Ótimo trabalho.',
         icon: CircleCheckBig,
         tone: 'done',
       };
@@ -514,14 +505,14 @@ function getDayStatus({
       return {
         title: 'Em andamento',
         description: `${loggedExercises} item${loggedExercises === 1 ? '' : 's'} registrado${loggedExercises === 1 ? '' : 's'} hoje.`,
-        icon: Play,
+        icon: CircleDashed,
         tone: 'progress',
       };
     }
 
     return {
-      title: 'Ainda nao iniciado',
-      description: 'Comece o treino para registrar sua evolucao.',
+      title: 'Ainda não iniciado',
+      description: 'Comece o treino para registrar sua evolução.',
       icon: CircleDashed,
       tone: 'idle',
     };
@@ -529,8 +520,8 @@ function getDayStatus({
 
   if (selectedWeekdayCompleted) {
     return {
-      title: 'Treino concluido',
-      description: 'Voce ja registrou essa sessao no historico semanal.',
+      title: 'Treino concluído',
+      description: 'Você já registrou essa sessão no histórico semanal.',
       icon: CircleCheckBig,
       tone: 'done',
     };
@@ -538,7 +529,7 @@ function getDayStatus({
 
   return {
     title: 'Treino planejado',
-    description: 'Esse dia esta pronto para quando voce quiser executar.',
+    description: 'Esse dia está pronto para quando você quiser executar.',
     icon: CircleDashed,
     tone: 'idle',
   };
@@ -547,7 +538,6 @@ function getDayStatus({
 function HomeContent({
   activeWorkout,
   onInstall,
-  onStartWorkout,
   isInstallAvailable,
   selectedWorkoutId,
   selectedWeekday,
@@ -559,9 +549,6 @@ function HomeContent({
   const isTodaySelected = selectedWeekday === todayWeekdayKey;
   const targetExercises = activeWorkout?.exercises?.length || 0;
   const loggedExercises = selectedWeekdayProgress?.loggedExercises || 0;
-  const isWorkoutConcluded =
-    Boolean(activeWorkout) &&
-    (selectedWeekdayCompleted || (targetExercises > 0 && loggedExercises >= targetExercises));
   const dayStatus = getDayStatus({
     activeWorkout,
     isTodaySelected,
@@ -578,46 +565,40 @@ function HomeContent({
         : 'bg-gray-500/14 text-gray-600 dark:bg-white/[0.1] dark:text-gray-300';
 
   return (
-    <>
-      <section className="mb-4">
+    <div className="space-y-4">
+      <section>
         <div className="mb-3">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0A3CFF] dark:text-[#8FB1FF]">Plano do dia</p>
+          <p className="hc-label text-[#0A3CFF] dark:text-[#8FB1FF]">Plano do dia</p>
         </div>
         {activeWorkout ? (
-          <TrainingCard workout={activeWorkout} onStart={onStartWorkout} />
+          <TrainingCard
+            workout={activeWorkout}
+            StatusIcon={DayStatusIcon}
+            statusTitle={dayStatus.title}
+            statusDescription={dayStatus.description}
+            statusToneClass={dayStatusToneClass}
+            objectiveText={OBJECTIVE_COPY[selectedWorkoutId] || 'Mantenha consistência e boa execução em cada série.'}
+            loggedExercises={loggedExercises}
+            targetExercises={targetExercises}
+          />
         ) : (
-          <div className="rounded-[28px] border border-black/[0.05] bg-white px-5 py-6 text-center shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+          <div className="hc-surface rounded-[22px] border border-black/[0.05] bg-white px-5 py-6 text-center dark:border-white/[0.08] dark:bg-white/[0.05]">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
               <BedDouble size={20} />
             </div>
-            <p className="mt-3 text-[20px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">Dia de descanso</p>
-            <p className="mt-2 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
-              Aproveite para recuperar, hidratar e preparar o proximo bloco.
+            <p className="hc-heading mt-3 text-[1.25rem] leading-tight tracking-[-0.02em] text-gray-950 dark:text-white">Dia de descanso</p>
+            <p className="mt-2 text-[0.875rem] leading-6 text-gray-500 dark:text-gray-400">
+              Aproveite para recuperar, hidratar e preparar o próximo bloco.
             </p>
           </div>
         )}
       </section>
 
-      {!isWorkoutConcluded && (
-        <section className="mb-4 rounded-[24px] border border-black/[0.05] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
-          <div className="flex items-center gap-3">
-            <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${dayStatusToneClass}`}>
-              <DayStatusIcon size={18} />
-            </span>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Status do dia</p>
-              <p className="mt-0.5 text-[18px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{dayStatus.title}</p>
-            </div>
-          </div>
-          <p className="mt-2 text-[13px] leading-relaxed text-gray-600 dark:text-gray-400">{dayStatus.description}</p>
-        </section>
-      )}
-
-      <section className="mb-5">
+      <section>
         <div className="mb-3 flex items-end justify-between">
           <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Registro rapido</p>
-            <h3 className="mt-1 text-[22px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">Treino diario</h3>
+            <p className="hc-label text-gray-500 dark:text-gray-400">Registro rápido</p>
+            <h3 className="hc-heading mt-1 text-[1.25rem] leading-tight tracking-[-0.02em] text-gray-950 dark:text-white">Treino diário</h3>
           </div>
         </div>
         {activeWorkout ? (
@@ -627,41 +608,17 @@ function HomeContent({
             targetDateKey={selectedDateKey}
           />
         ) : (
-          <div className="rounded-[20px] border border-black/[0.05] bg-white px-4 py-5 text-center text-[13px] text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400">
-            Sem treino atribuido para este dia.
+          <div className="hc-surface rounded-[20px] border border-black/[0.05] bg-white px-4 py-5 text-center text-[0.875rem] text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400">
+            Sem treino atribuído para este dia.
           </div>
         )}
       </section>
 
-      <section className="mb-6">
-        <div className="overflow-hidden rounded-[26px] border border-black/[0.05] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
-          <div className="flex items-start gap-3 px-5 pb-3 pt-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
-              <Sparkles size={18} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Objetivo principal</p>
-              <p className="mt-2 text-[30px] font-bold leading-[1.02] tracking-[-0.05em] text-gray-950 dark:text-white">
-                {activeWorkout?.type || 'Recuperacao'}
-              </p>
-            </div>
-          </div>
-          <div className="border-t border-black/[0.05] px-5 py-3 dark:border-white/[0.06]">
-            <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-400">
-              {OBJECTIVE_COPY[selectedWorkoutId] ||
-                (activeWorkout
-                  ? 'Mantenha consistencia e boa execucao em cada serie.'
-                  : 'Dia leve para recuperar e manter consistencia.')}
-            </p>
-          </div>
-        </div>
-      </section>
-
       {isInstallAvailable && (
-        <section className="mb-4">
+        <section>
           <button
             onClick={onInstall}
-            className="flex w-full items-center justify-between gap-3 overflow-hidden rounded-[26px] border border-[#0A3CFF]/10 bg-white px-4 py-4 text-left shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-transform active:scale-[0.99] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none"
+            className="hc-surface flex w-full items-center justify-between gap-3 overflow-hidden rounded-[22px] border border-[#0A3CFF]/10 bg-white px-4 py-4 text-left transition hover:border-[#0A3CFF]/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] active:scale-[0.99] dark:border-white/[0.08] dark:bg-white/[0.05]"
           >
             <div className="flex items-center gap-3">
               <img
@@ -675,16 +632,16 @@ function HomeContent({
                 className="h-12 w-12 rounded-[14px] object-cover shadow-[0_8px_18px_rgba(15,23,42,0.14)]"
               />
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0A3CFF] dark:text-[#AFC5FF]">Instalar app</p>
-                <p className="mt-1 text-[15px] font-semibold text-gray-950 dark:text-white">Adicionar o Hibrid Club a tela inicial</p>
+                <p className="hc-label text-[#0A3CFF] dark:text-[#AFC5FF]">Instalar app</p>
+                <p className="mt-1 text-[0.9375rem] font-semibold leading-5 text-gray-950 dark:text-white">Adicionar o Hibrid Club a tela inicial</p>
               </div>
             </div>
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0A3CFF] text-white shadow-[0_12px_24px_rgba(10,60,255,0.24)]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0A3CFF] text-white">
               <Download size={18} />
             </span>
           </button>
         </section>
       )}
-    </>
+    </div>
   );
 }

@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:android": "vite build --base=./",
     "preview": "vite preview",
     "android:init": "npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/app --save-dev && npx cap add android",
-    "android:sync": "npm run build && npx cap sync android",
+    "android:sync": "npm run build:android && npx cap sync android",
     "android:open": "npm run android:sync && npx cap open android",
     "android:debug": "npm run android:sync && cd android && gradlew assembleDebug",
     "predeploy": "npm run build",

@@ -39,13 +39,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build web app
+      - name: Build Android web assets
         env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_OWNER_EMAIL: ${{ secrets.VITE_OWNER_EMAIL }}
-        run: npm run build
+        run: npm run build:android
 
       - name: Sync Capacitor Android project
         run: npx cap sync android

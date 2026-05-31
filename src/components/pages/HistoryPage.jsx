@@ -137,9 +137,9 @@ export default function HistoryPage({ plan = workoutPlan }) {
 
   return (
     <div>
-      <header className="mb-5">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Sessões salvas</p>
-        <h2 className="mt-1 text-[32px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">Histórico</h2>
+      <header className="mb-4">
+        <p className="hc-label text-gray-500 dark:text-gray-400">Sessões salvas</p>
+        <h2 className="hc-heading mt-1 text-[1.625rem] leading-tight tracking-[-0.03em] text-gray-950 dark:text-white">Histórico</h2>
       </header>
 
       {storageError && (
@@ -149,11 +149,11 @@ export default function HistoryPage({ plan = workoutPlan }) {
         </div>
       )}
 
-      <section className="mb-4 overflow-hidden rounded-[28px] border border-black/[0.05] bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+      <section className="hc-surface mb-4 overflow-hidden rounded-[22px] border border-black/[0.05] bg-white p-4 dark:border-white/[0.08] dark:bg-white/[0.05]">
         <div className="mb-5 flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Calendario</p>
-            <h3 className="mt-1 text-[24px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">
+            <p className="hc-label text-gray-500 dark:text-gray-400">Calendário</p>
+            <h3 className="hc-heading mt-1 text-[1.375rem] leading-tight tracking-[-0.03em] text-gray-950 dark:text-white">
               {visibleMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
             </h3>
             <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
@@ -203,12 +203,12 @@ export default function HistoryPage({ plan = workoutPlan }) {
               <button
                 key={dateKey}
                 onClick={() => setSelectedDateKey(dateKey)}
-                className={`relative flex h-[54px] flex-col items-center justify-center rounded-[18px] border text-center transition-all duration-200 ${
+                className={`relative flex h-[50px] flex-col items-center justify-center rounded-2xl border text-center transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] ${
                   isSelected
                     ? 'border-[#0A3CFF] bg-[#0A3CFF] text-white shadow-[0_10px_22px_rgba(10,60,255,0.2)]'
                     : hasWorkout
-                      ? 'border-[#0A3CFF]/12 bg-[#F4F7FF] text-[#0A3CFF] hover:border-[#0A3CFF]/25 dark:border-white/[0.06] dark:bg-[#0A3CFF]/12 dark:text-[#AFC5FF]'
-                      : 'border-black/[0.05] bg-[#FAFBFE] text-gray-600 hover:border-black/[0.08] dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-gray-400'
+                      ? 'border-[#0A3CFF]/12 bg-white/56 text-[#0A3CFF] hover:border-[#0A3CFF]/25 dark:border-white/[0.06] dark:bg-[#0A3CFF]/12 dark:text-[#AFC5FF]'
+                      : 'border-black/[0.045] bg-white/38 text-gray-600 hover:border-black/[0.08] dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-gray-400'
                 }`}
               >
                 <span className={`text-[15px] font-bold ${isToday && !isSelected ? 'text-gray-950 dark:text-white' : ''}`}>
@@ -225,7 +225,7 @@ export default function HistoryPage({ plan = workoutPlan }) {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-[28px] border border-black/[0.05] bg-white shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+      <section className="hc-surface overflow-hidden rounded-[22px] border border-black/[0.05] bg-white dark:border-white/[0.08] dark:bg-white/[0.05]">
         {!hasSelectedWorkout && (
           <div className="px-6 py-12 text-center">
             <p className="text-[15px] font-semibold text-gray-500 dark:text-gray-400">Nenhum treino salvo neste dia.</p>
@@ -236,11 +236,11 @@ export default function HistoryPage({ plan = workoutPlan }) {
             </p>
             {(selectedNutrition.water > 0 || selectedNutrition.calories > 0) && (
               <div className="mt-5 grid grid-cols-2 gap-3 text-left">
-                <div className="rounded-[16px] border border-black/[0.05] bg-[#F7F9FD] px-3 py-3 dark:border-white/[0.08] dark:bg-white/[0.04]">
+                <div className="rounded-2xl border border-black/[0.045] bg-white/48 px-3 py-3 dark:border-white/[0.08] dark:bg-white/[0.04]">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Água</p>
                   <p className="mt-1 text-[18px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{selectedNutrition.water} ml</p>
                 </div>
-                <div className="rounded-[16px] border border-black/[0.05] bg-[#F7F9FD] px-3 py-3 dark:border-white/[0.08] dark:bg-white/[0.04]">
+                <div className="rounded-2xl border border-black/[0.045] bg-white/48 px-3 py-3 dark:border-white/[0.08] dark:bg-white/[0.04]">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Calorias</p>
                   <p className="mt-1 text-[18px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{selectedNutrition.calories} kcal</p>
                 </div>
@@ -275,11 +275,11 @@ export default function HistoryPage({ plan = workoutPlan }) {
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <div className="rounded-[14px] border border-black/[0.05] bg-[#F7F9FD] px-3 py-2.5 text-left dark:border-white/[0.08] dark:bg-white/[0.04]">
+                <div className="rounded-2xl border border-black/[0.045] bg-white/48 px-3 py-2.5 text-left dark:border-white/[0.08] dark:bg-white/[0.04]">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Água</p>
                   <p className="mt-1 text-[16px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{selectedNutrition.water} ml</p>
                 </div>
-                <div className="rounded-[14px] border border-black/[0.05] bg-[#F7F9FD] px-3 py-2.5 text-left dark:border-white/[0.08] dark:bg-white/[0.04]">
+                <div className="rounded-2xl border border-black/[0.045] bg-white/48 px-3 py-2.5 text-left dark:border-white/[0.08] dark:bg-white/[0.04]">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Calorias</p>
                   <p className="mt-1 text-[16px] font-bold tracking-[-0.02em] text-gray-950 dark:text-white">{selectedNutrition.calories} kcal</p>
                 </div>
@@ -295,7 +295,7 @@ export default function HistoryPage({ plan = workoutPlan }) {
                 return (
                   <article
                     key={`${selectedDateKey}-${session.workoutId}`}
-                    className="overflow-hidden rounded-[24px] border border-black/[0.05] bg-[#FBFCFF] dark:border-white/[0.06] dark:bg-white/[0.03]"
+                    className="overflow-hidden rounded-[20px] border border-black/[0.045] bg-white/48 dark:border-white/[0.06] dark:bg-white/[0.03]"
                   >
                     <div className="border-b border-black/[0.05] px-4 py-4 dark:border-white/[0.06]">
                       <div className="flex items-start justify-between gap-4">

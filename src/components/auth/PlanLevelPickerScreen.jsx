@@ -64,10 +64,10 @@ export default function PlanLevelPickerScreen({
                 key={template.slug}
                 disabled={isBusy}
                 onClick={() => onSelectTemplate(template.slug)}
-                className={`w-full rounded-[24px] border px-4 py-4 text-left shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all dark:shadow-none ${
+                className={`w-full rounded-[20px] border px-4 py-4 text-left transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] disabled:cursor-not-allowed disabled:opacity-60 ${
                   isSelected
                     ? 'border-[#0A3CFF]/50 bg-[#0A3CFF]/12 dark:border-[#AFC5FF]/45 dark:bg-[#0A3CFF]/18'
-                    : 'border-black/[0.08] bg-white/92 dark:border-white/[0.08] dark:bg-white/[0.05]'
+                    : 'border-black/[0.06] bg-white/92 hover:border-[#0A3CFF]/20 dark:border-white/[0.08] dark:bg-white/[0.05]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -83,7 +83,7 @@ export default function PlanLevelPickerScreen({
         </div>
 
         <div className="mt-4 min-h-[42px]">
-          <p className="text-center text-[13px] leading-relaxed text-gray-700 dark:text-gray-400">
+          <p role={message ? 'status' : undefined} className="text-center text-[13px] leading-relaxed text-gray-700 dark:text-gray-400">
             {message || 'Você poderá editar completamente este plano depois.'}
           </p>
         </div>

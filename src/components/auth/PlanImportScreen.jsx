@@ -28,6 +28,8 @@ export default function PlanImportScreen({
 }) {
   const [fileName, setFileName] = useState('');
   const summary = useMemo(() => getSessionSummary(parsedPlan), [parsedPlan]);
+  const fileInputId = 'plan-svg-upload';
+  const importStatusId = 'plan-import-status';
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -82,17 +84,31 @@ export default function PlanImportScreen({
           </p>
         </div>
 
-        <div className="mt-7 rounded-[30px] border border-black/[0.08] bg-white/92 p-5 shadow-[0_20px_44px_rgba(15,23,42,0.1)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-[0_20px_44px_rgba(0,0,0,0.3)]">
-          <label className="flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#0A3CFF] px-4 text-[15px] font-semibold text-white shadow-[0_16px_30px_rgba(10,60,255,0.24)]">
+        <div className="mt-7 rounded-[22px] border border-black/[0.06] bg-white/92 p-5 shadow-[0_8px_14px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+          <label
+            htmlFor={fileInputId}
+            className="flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#0A3CFF] px-4 text-[15px] font-semibold text-white shadow-[0_8px_14px_rgba(10,60,255,0.2)] transition-transform focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#0A3CFF] active:scale-[0.99]"
+          >
             <FileUp size={18} />
             Enviar SVG
-            <input type="file" accept=".svg,image/svg+xml" className="hidden" onChange={handleFileChange} />
+            <input
+              id={fileInputId}
+              type="file"
+              accept=".svg,image/svg+xml"
+              className="sr-only"
+              onChange={handleFileChange}
+              aria-describedby={importStatusId}
+            />
           </label>
 
-          {fileName && <p className="mt-3 text-center text-[12px] text-gray-700 dark:text-gray-400">Arquivo: {fileName}</p>}
+          {fileName && (
+            <p className="mt-3 break-words text-center text-[12px] text-gray-700 dark:text-gray-400">
+              Arquivo selecionado: {fileName}
+            </p>
+          )}
 
           {parsedPlan && (
-            <div className="mt-4 rounded-[22px] border border-black/[0.08] bg-[#F7F9FD] p-4 dark:border-white/[0.08] dark:bg-white/[0.04]">
+            <div className="mt-4 rounded-[18px] border border-black/[0.06] bg-[#F7F9FD] p-4 dark:border-white/[0.08] dark:bg-white/[0.04]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
                 Pré-visualização
               </p>
@@ -113,27 +129,27 @@ export default function PlanImportScreen({
             <button
               disabled={!parsedPlan || isBusy}
               onClick={onSaveDraft}
-              className="h-12 rounded-2xl border border-black/[0.08] bg-white text-[14px] font-semibold text-gray-700 disabled:opacity-50 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-200"
+              className="h-12 rounded-2xl border border-black/[0.08] bg-white text-[14px] font-semibold text-gray-700 transition-colors hover:bg-[#F8FAFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-200"
             >
               Salvar rascunho
             </button>
             <button
               disabled={!parsedPlan || isBusy}
               onClick={onPublish}
-              className="h-12 rounded-2xl bg-[#0A3CFF] text-[14px] font-semibold text-white shadow-[0_12px_24px_rgba(10,60,255,0.25)] disabled:opacity-50"
+              className="h-12 rounded-2xl bg-[#0A3CFF] text-[14px] font-semibold text-white shadow-[0_8px_14px_rgba(10,60,255,0.2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Publicar
             </button>
           </div>
 
-          <div className="mt-4 min-h-[48px]">
+          <div id={importStatusId} className="mt-4 min-h-[48px]">
             {errorMessage ? (
-              <p className="flex items-center justify-center gap-2 text-center text-[13px] text-rose-600 dark:text-rose-300">
+              <p role="alert" className="flex items-center justify-center gap-2 text-center text-[13px] text-rose-600 dark:text-rose-300">
                 <AlertCircle size={14} />
                 {errorMessage}
               </p>
             ) : successMessage ? (
-              <p className="flex items-center justify-center gap-2 text-center text-[13px] text-emerald-600 dark:text-emerald-300">
+              <p role="status" className="flex items-center justify-center gap-2 text-center text-[13px] text-emerald-600 dark:text-emerald-300">
                 <CheckCircle2 size={14} />
                 {successMessage}
               </p>

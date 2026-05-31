@@ -104,7 +104,7 @@ export default function OnboardingScreen({ onContinue, isDark, onToggleTheme }) 
                         </div>
                       </>
                     ) : (
-                      <div className="w-full rounded-[30px] border border-black/[0.08] bg-white/84 px-5 py-7 text-center shadow-[0_20px_44px_rgba(15,23,42,0.1)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-[0_20px_44px_rgba(0,0,0,0.3)]">
+                      <div className="w-full rounded-[22px] border border-black/[0.06] bg-white/88 px-5 py-7 text-center shadow-[0_8px_14px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
                         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A3CFF]/12 text-[#0A3CFF] dark:bg-[#0A3CFF]/24 dark:text-[#AFC5FF]">
                           {slide.kind === 'value' ? <Footprints size={20} /> : <Dumbbell size={20} />}
                         </div>
@@ -151,14 +151,12 @@ export default function OnboardingScreen({ onContinue, isDark, onToggleTheme }) 
           </div>
           <button
             onClick={handleNext}
-            className="group relative flex h-16 w-full items-center justify-center overflow-hidden rounded-[28px] border border-white/45 bg-white/18 px-5 text-[16px] font-semibold tracking-[-0.02em] text-gray-950 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur-[28px] transition-all duration-300 active:scale-[0.99] dark:border-white/[0.16] dark:bg-white/[0.08] dark:text-white dark:shadow-[0_20px_44px_rgba(0,0,0,0.34)]"
-            aria-label="Continuar para o login"
+            className="group relative flex h-14 w-full items-center justify-center overflow-hidden rounded-[22px] border border-[#0A3CFF]/18 bg-white/88 px-5 text-[15px] font-semibold tracking-[-0.01em] text-gray-950 shadow-[0_8px_14px_rgba(15,23,42,0.08)] transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] active:scale-[0.99] dark:border-white/[0.12] dark:bg-white/[0.07] dark:text-white dark:shadow-none"
+            aria-label={step >= totalSteps - 1 ? 'Continuar para o login' : 'Avançar apresentação'}
           >
-            <span className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-white/40" />
-            <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.36),rgba(255,255,255,0.1))] opacity-95 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.03))]" />
-            <span className="absolute inset-[1px] rounded-[27px] border border-black/[0.03] dark:border-white/[0.06]" />
-            <span className="relative flex items-center justify-center">
-              <ArrowRight size={20} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+            <span className="relative flex items-center justify-center gap-2">
+              {step >= totalSteps - 1 ? 'Continuar para o login' : 'Continuar'}
+              <ArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-0.5" />
             </span>
           </button>
         </div>

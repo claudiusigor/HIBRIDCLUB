@@ -392,7 +392,7 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
       setDraftTouched(false);
       setLastAutoSavedAt(Date.now());
     } catch {
-      setAutoSaveError('Nao foi possivel salvar automaticamente. Toque em "Salvar rascunho".');
+      setAutoSaveError('Não foi possível salvar automaticamente. Toque em "Salvar rascunho".');
     } finally {
       autoSaveInFlightRef.current = false;
       setIsAutoSaving(false);
@@ -622,14 +622,14 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
             {editMode ? 'Fechar editor' : 'Editar plano'}
           </button>
         </div>
-        <h2 className="mt-3 text-[32px] font-bold tracking-[-0.04em] text-gray-950 dark:text-white">Plano Hibrido</h2>
-        <p className="mt-2 max-w-[36rem] text-[14px] leading-relaxed text-gray-500 dark:text-gray-400">
-          Conteudo estruturado a partir de {sourceLabel}, com edicao completa por card de dia.
+        <h2 className="hc-heading mt-3 text-[1.625rem] leading-tight tracking-[-0.03em] text-gray-950 dark:text-white">Plano Híbrido</h2>
+        <p className="mt-2 max-w-[34rem] text-[0.875rem] leading-6 text-gray-600 dark:text-gray-400">
+          Conteúdo estruturado a partir de {sourceLabel}, com edição completa por card de dia.
         </p>
       </header>
 
-      <section className="mb-4 rounded-[28px] border border-black/[0.05] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Dados gerais</p>
+      <section className="hc-surface mb-4 rounded-[22px] border border-black/[0.05] bg-white p-4 dark:border-white/[0.08] dark:bg-white/[0.05]">
+        <p className="hc-label text-gray-500 dark:text-gray-400">Dados gerais</p>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <GeneralCard icon={<Dumbbell size={18} />} label="Foco" value={activePlan.general.focus} />
           <GeneralCard icon={<Flame size={18} />} label="TDEE base" value={`${activePlan.general.tdee} kcal`} />
@@ -707,9 +707,9 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
         )}
       </section>
 
-      <section className="mb-4 rounded-[28px] border border-black/[0.05] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
+      <section className="hc-surface mb-4 rounded-[22px] border border-black/[0.05] bg-white p-4 dark:border-white/[0.08] dark:bg-white/[0.05]">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
+          <p className="hc-label text-gray-500 dark:text-gray-400">
             Agenda semanal
           </p>
           <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">{assignedCount} dias com treino</p>
@@ -751,10 +751,10 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
                         }
                       : undefined
                 }
-                className={`rounded-2xl border px-3 py-3 transition-all ${
+                className={`rounded-[18px] border px-3.5 py-3 transition-all ${
                   isExpanded
-                    ? 'border-[#0A3CFF]/35 bg-[#F4F7FF] dark:border-[#0A3CFF]/45 dark:bg-[#0A3CFF]/20'
-                    : 'border-black/[0.06] bg-[#F7F9FD] dark:border-white/[0.08] dark:bg-white/[0.04]'
+                    ? 'border-[#0A3CFF]/32 bg-[#F4F7FF] shadow-[0_6px_14px_rgba(10,60,255,0.08)] dark:border-[#0A3CFF]/45 dark:bg-[#0A3CFF]/18 dark:shadow-none'
+                    : 'border-black/[0.045] bg-white/48 dark:border-white/[0.07] dark:bg-white/[0.035]'
                 } ${isDragActive ? 'opacity-70' : ''} ${
                   touchDragOverWeekday === card.weekdayKey && dragSource && dragSource !== card.weekdayKey
                     ? 'ring-2 ring-[#0A3CFF]/45'
@@ -785,7 +785,7 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
                     <button
                       type="button"
                       onClick={() => setExpandedWeekday((current) => (current === card.weekdayKey ? null : card.weekdayKey))}
-                      className="text-left"
+                      className="text-left transition-colors hover:text-[#0A3CFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0A3CFF]"
                     >
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{card.weekdayLabel}</p>
                       <p className="mt-1 text-[16px] font-bold text-gray-950 dark:text-white">
@@ -945,7 +945,7 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
           </div>
         )}
 
-        {feedback && <p className="mt-3 text-[13px] text-gray-600 dark:text-gray-300">{feedback}</p>}
+        {feedback && <p className="mt-3 text-[13px] font-medium text-gray-600 dark:text-gray-300">{feedback}</p>}
         {editMode && (
           <p
             className={`mt-2 text-[12px] ${
@@ -971,11 +971,11 @@ export default function PlanPage({ plan = workoutPlan, userId, onPlanUpdated }) 
 
 function GeneralCard({ icon, label, value }) {
   return (
-    <div className="rounded-[20px] bg-[#F7F9FD] px-4 py-3 dark:bg-white/[0.04]">
+    <div className="rounded-[18px] border border-black/[0.04] bg-white/52 px-3.5 py-3 dark:border-white/[0.06] dark:bg-white/[0.035]">
       <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#0A3CFF]/10 text-[#0A3CFF] dark:bg-[#0A3CFF]/20 dark:text-[#AFC5FF]">
         {icon}
       </div>
-      <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="hc-label mt-2 text-gray-500 dark:text-gray-400">{label}</p>
       <p className="mt-1 text-[17px] font-bold tracking-[-0.03em] text-gray-950 dark:text-white">{value}</p>
     </div>
   );

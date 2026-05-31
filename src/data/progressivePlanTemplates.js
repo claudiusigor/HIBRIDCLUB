@@ -33,7 +33,7 @@ function applySessionIdentity(planData) {
 }
 
 const basicTemplate = clone(publicPlanTemplate);
-basicTemplate.metadata = buildMetadata('basic', 'Plano Hibrido Basico');
+basicTemplate.metadata = buildMetadata('basic', 'Plano Híbrido Básico');
 basicTemplate.general.focus = 'Base de força + corrida leve + consistência';
 basicTemplate.schedule.A.name = 'Inferiores Base';
 basicTemplate.schedule.B.name = 'Superiores Base';
@@ -51,24 +51,24 @@ intermediateTemplate.schedule.B.exercises[0].name = 'Supino reto com pausa';
 intermediateTemplate.schedule.C.exercises[0].name = 'Corrida progressiva';
 intermediateTemplate.schedule.D.exercises[0].name = 'Levantamento terra convencional';
 intermediateTemplate.schedule.E.exercises[0].name = 'Barra fixa pronada';
-intermediateTemplate.schedule.F.exercises[0].name = 'Longao progressivo';
+intermediateTemplate.schedule.F.exercises[0].name = 'Longão progressivo';
 applySessionIdentity(intermediateTemplate);
 
 const advancedTemplate = clone(publicPlanTemplate);
-advancedTemplate.metadata = buildMetadata('advanced', 'Plano Hibrido Avancado');
+advancedTemplate.metadata = buildMetadata('advanced', 'Plano Híbrido Avançado');
 advancedTemplate.general.focus = 'Alta performance em força e corrida';
 advancedTemplate.schedule.A.exercises[0].name = 'Agachamento livre high-bar';
 advancedTemplate.schedule.B.exercises[0].name = 'Supino com pausa longa';
 advancedTemplate.schedule.C.exercises[0].name = 'Tempo run';
 advancedTemplate.schedule.D.exercises[0].name = 'Terra pesado tecnico';
 advancedTemplate.schedule.E.exercises[0].name = 'Remada curvada strict';
-advancedTemplate.schedule.F.exercises[0].name = 'Longao com bloco forte final';
+advancedTemplate.schedule.F.exercises[0].name = 'Longão com bloco forte final';
 applySessionIdentity(advancedTemplate);
 
 export const progressivePlanTemplates = [
   {
     slug: 'hibrid-club-basic',
-    name: 'Basico',
+    name: 'Básico',
     level: 'basic',
     description: 'Entrada progressiva com fundamentos de força e cardio.',
     plan_data: basicTemplate,
@@ -77,12 +77,12 @@ export const progressivePlanTemplates = [
     slug: 'hibrid-club-intermediate',
     name: 'Intermediário',
     level: 'intermediate',
-    description: 'Maior variedade tecnica e estrutura de evolucao semanal.',
+    description: 'Maior variedade técnica e estrutura de evolução semanal.',
     plan_data: intermediateTemplate,
   },
   {
     slug: 'hibrid-club-advanced',
-    name: 'Avancado',
+    name: 'Avançado',
     level: 'advanced',
     description: 'Modelo intenso para usuarios com base consolidada.',
     plan_data: advancedTemplate,

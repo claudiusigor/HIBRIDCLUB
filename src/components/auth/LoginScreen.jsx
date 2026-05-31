@@ -16,7 +16,14 @@ export default function LoginScreen({
   const [email, setEmail] = useState('');
   const [localMessage, setLocalMessage] = useState('');
 
-  const handleMagicLink = async () => {
+  const statusMessage = localMessage || authMessage;
+  const isStatusError = Boolean(authMessage) || localMessage.startsWith('Digite');
+  const emailInputId = 'login-email';
+  const emailStatusId = 'login-status';
+
+  const handleMagicLink = async (event) => {
+    event?.preventDefault();
+
     if (!email.trim()) {
       setLocalMessage('Digite um e-mail válido para receber o link.');
       return;
@@ -69,9 +76,10 @@ export default function LoginScreen({
 
         <div className="mt-10 space-y-3">
           <button
+            type="button"
             onClick={() => onAuthAction(signInWithGoogle)}
             disabled={!isSupabaseConfigured || isBusy}
-            className="flex h-12 w-full items-center justify-center gap-3 rounded-2xl bg-[#0A3CFF] px-4 text-[15px] font-semibold text-white shadow-[0_14px_28px_rgba(10,60,255,0.26)] transition-transform disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
+            className="flex h-12 w-full items-center justify-center gap-3 rounded-2xl bg-[#0A3CFF] px-4 text-[15px] font-semibold text-white shadow-[0_8px_14px_rgba(10,60,255,0.2)] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
           >
             <span className="text-[19px] leading-none">G</span>
             Entrar com Google
@@ -84,44 +92,62 @@ export default function LoginScreen({
           </div>
 
           <button
+            type="button"
             onClick={() => setShowEmailForm((value) => !value)}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.1] bg-white/92 px-4 text-[14px] font-semibold text-gray-700 transition-colors hover:bg-[#F8FAFF] dark:border-white/[0.12] dark:bg-white/[0.08] dark:text-gray-200 dark:hover:bg-white/[0.12]"
+            aria-expanded={showEmailForm}
+            aria-controls="login-email-form"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white/92 px-4 text-[14px] font-semibold text-gray-700 transition-colors hover:bg-[#F8FAFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] dark:border-white/[0.12] dark:bg-white/[0.08] dark:text-gray-200 dark:hover:bg-white/[0.12]"
           >
             <Mail size={16} />
             Entrar com e-mail
           </button>
 
           {showEmailForm && (
-            <div className="rounded-2xl border border-black/[0.08] bg-white/88 p-3.5 shadow-[0_12px_24px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-white/[0.12] dark:bg-white/[0.06] dark:shadow-none">
-              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+            <form
+              id="login-email-form"
+              onSubmit={handleMagicLink}
+              className="rounded-2xl border border-black/[0.08] bg-white/88 p-3.5 shadow-[0_6px_8px_rgba(15,23,42,0.06)] dark:border-white/[0.12] dark:bg-white/[0.06] dark:shadow-none"
+            >
+              <label htmlFor={emailInputId} className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
                 E-mail
               </label>
               <input
+                id={emailInputId}
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="voce@email.com"
-                className="h-10 w-full rounded-lg border border-black/[0.1] bg-white px-3.5 text-[15px] font-medium text-gray-950 outline-none transition-shadow placeholder:text-gray-400 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-white dark:placeholder:text-gray-500"
+                autoComplete="email"
+                inputMode="email"
+                required
+                aria-describedby={emailStatusId}
+                aria-invalid={isStatusError || undefined}
+                className="h-11 w-full rounded-xl border border-black/[0.1] bg-white px-3.5 text-[15px] font-medium text-gray-950 outline-none transition-shadow placeholder:text-gray-500 focus:ring-2 focus:ring-[#0A3CFF]/24 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-white dark:placeholder:text-gray-500"
               />
               <button
-                onClick={handleMagicLink}
+                type="submit"
                 disabled={!isSupabaseConfigured || isBusy}
-                className="mt-2.5 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0A3CFF] px-4 text-[14px] font-semibold text-white transition-transform disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
+                className="mt-2.5 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0A3CFF] px-4 text-[14px] font-semibold text-white transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
               >
-                Enviar link mágico
+                {isBusy ? 'Enviando link...' : 'Enviar link mágico'}
                 <MoveRight size={16} />
               </button>
-            </div>
+            </form>
           )}
 
-          <div className="min-h-[22px] pt-1">
-            {(localMessage || authMessage) && (
-              <p className="text-center text-[12px] leading-relaxed text-gray-600 dark:text-gray-300">
-                {localMessage || authMessage}
+          <div id={emailStatusId} className="min-h-[22px] pt-1">
+            {statusMessage && (
+              <p
+                role={isStatusError ? 'alert' : 'status'}
+                className={`text-center text-[12px] leading-relaxed ${
+                  isStatusError ? 'text-rose-600 dark:text-rose-300' : 'text-gray-600 dark:text-gray-300'
+                }`}
+              >
+                {statusMessage}
               </p>
             )}
             {!isSupabaseConfigured && (
-              <p className="text-center text-[12px] leading-relaxed text-amber-600 dark:text-amber-300">
+              <p role="alert" className="text-center text-[12px] leading-relaxed text-amber-600 dark:text-amber-300">
                 Configure o Supabase no `.env` para ativar Google, e-mail mágico e ficha por usuário.
               </p>
             )}

@@ -767,7 +767,7 @@ function SessionLoadingScreen({ label, description, actionLabel, onAction, isBus
         <div className="absolute left-[-10%] top-[-2%] h-72 w-72 rounded-full bg-[#CFE1FF]/68 blur-3xl dark:bg-[#123EAA]/24" />
         <div className="absolute bottom-[8%] right-[-16%] h-72 w-72 rounded-full bg-[#D8F4CE]/34 blur-3xl dark:bg-[#0C4A38]/16" />
       </div>
-      <div className="relative w-full max-w-sm rounded-[32px] border border-black/[0.05] bg-white/86 px-6 py-8 text-center shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-[0_24px_60px_rgba(0,0,0,0.34)]">
+      <div aria-live="polite" className="relative w-full max-w-sm rounded-[22px] border border-black/[0.06] bg-white/88 px-6 py-8 text-center shadow-[0_8px_14px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-white/[0.05] dark:shadow-none">
         <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[#0A3CFF]/15 border-t-[#0A3CFF]" />
         <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0A3CFF] dark:text-[#AFC5FF]">
           Hibrid Club
@@ -777,7 +777,7 @@ function SessionLoadingScreen({ label, description, actionLabel, onAction, isBus
         <button
           onClick={onAction}
           disabled={isBusy}
-          className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-black/[0.06] bg-[#F7F9FD] px-4 text-[14px] font-semibold text-gray-700 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-200 dark:hover:bg-white/[0.07]"
+          className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-black/[0.06] bg-[#F7F9FD] px-4 text-[14px] font-semibold text-gray-700 transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-200 dark:hover:bg-white/[0.07]"
         >
           <ActionIcon size={16} />
           {actionLabel}

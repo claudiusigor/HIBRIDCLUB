@@ -294,7 +294,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
 
   return (
     <div className="hc-app-shell min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white">
-      <header className="hc-topbar sticky top-0 z-40 border-b border-black/[0.04] bg-[#F5F7FB]/94 pb-4 pt-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-[#0A0D14]/92">
+      <header className="hc-topbar sticky top-0 z-40 bg-[#F5F7FB]/94 pb-4 pt-4 backdrop-blur-xl dark:bg-[#0A0D14]/92">
         <div className="mx-auto w-full max-w-[430px] px-5">
         <div className="mb-3 grid grid-cols-[44px_1fr_44px] items-center">
           <div>
@@ -512,7 +512,7 @@ function getDayStatus({
 
     return {
       title: 'Ainda não iniciado',
-      description: 'Comece o treino para registrar sua evolução.',
+      description: 'Preencha os itens abaixo como checklist do treino.',
       icon: CircleDashed,
       tone: 'idle',
     };
@@ -597,8 +597,7 @@ function HomeContent({
       <section>
         <div className="mb-3 flex items-end justify-between">
           <div>
-            <p className="hc-label text-gray-500 dark:text-gray-400">Registro rápido</p>
-            <h3 className="hc-heading mt-1 text-[1.25rem] leading-tight tracking-[-0.02em] text-gray-950 dark:text-white">Treino diário</h3>
+            <h3 className="hc-heading text-[1.125rem] leading-tight tracking-[-0.02em] text-gray-950 dark:text-white">Checklist do treino</h3>
           </div>
         </div>
         {activeWorkout ? (

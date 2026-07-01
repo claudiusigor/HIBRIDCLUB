@@ -332,7 +332,19 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey }) 
   }
 
   return (
-    <div className="hc-surface rounded-3xl border border-black/[0.05] bg-white px-3.5 pb-2 pt-1 shadow-[0_6px_8px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.055] dark:shadow-none">
+    <div className="hc-surface overflow-hidden rounded-[22px] border border-black/[0.05] bg-white shadow-[0_6px_8px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.055] dark:shadow-none">
+      <div className="border-b border-black/[0.055] px-3.5 py-3 dark:border-white/[0.07]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="hc-label text-gray-500 dark:text-gray-400">Preenchimento</p>
+          </div>
+          <div className="hc-numeric shrink-0 rounded-full border border-black/[0.06] bg-white px-3 py-1.5 text-[0.8125rem] font-semibold leading-none text-gray-800 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-100">
+            {doneCount}/{exercises.length}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-3.5 pb-2 pt-1">
       {visible.map((ex) => (
         <LogItem
           key={ex.id}
@@ -356,14 +368,17 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey }) 
       {exercises.length > 3 && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="mt-1 w-full py-2.5 text-center text-[0.8125rem] font-bold text-[#0A3CFF] active:opacity-70 dark:text-[#8FB1FF]"
+          className="mt-1 w-full rounded-xl py-2.5 text-center text-[0.8125rem] font-semibold text-[#0A3CFF] transition hover:bg-[#0A3CFF]/5 active:opacity-70 dark:text-[#8FB1FF] dark:hover:bg-white/[0.04]"
         >
           {expanded ? 'Ver menos' : `Ver todos (${exercises.length})`}
         </button>
       )}
 
-      <div className="hc-label hc-numeric px-0.5 pb-2 pt-1 text-right text-gray-500 dark:text-gray-400">
-        {doneCount}/{exercises.length} feitos
+      {allDone && (
+        <div className="px-0.5 pb-2 pt-1 text-[0.75rem] font-semibold leading-5 text-emerald-700 dark:text-emerald-300">
+          Checklist finalizado
+        </div>
+      )}
       </div>
     </div>
   );

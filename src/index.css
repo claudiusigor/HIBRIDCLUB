@@ -83,7 +83,8 @@
   background:
     linear-gradient(180deg, oklch(96.2% 0.024 255 / 0.96), oklch(94.8% 0.022 252 / 0.9));
   border-bottom: 0 !important;
-  box-shadow: inset 0 -1px 0 oklch(84% 0.05 252 / 0.28);
+  border-radius: 0 0 1.25rem 1.25rem;
+  box-shadow: 0 7px 10px oklch(44% 0.055 252 / 0.055);
 }
 
 .hc-topbar > div {
@@ -91,51 +92,30 @@
   z-index: 1;
 }
 
-.hc-topbar::before,
-.hc-topbar::after {
+.hc-topbar::before {
   content: '';
   position: absolute;
   pointer-events: none;
-}
-
-.hc-topbar::before {
-  left: 50%;
-  bottom: -0.45rem;
-  width: min(21rem, calc(100vw - 4rem));
-  height: 0.9rem;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: oklch(91% 0.05 252 / 0.58);
-  filter: blur(12px);
-}
-
-.hc-topbar::after {
-  inset-inline: 0;
-  bottom: -2rem;
-  z-index: -1;
-  height: 2.25rem;
-  background:
-    radial-gradient(70% 125% at 50% 0%, oklch(93.8% 0.04 252 / 0.7), transparent 72%),
-    linear-gradient(180deg, oklch(94.8% 0.022 252 / 0.46), transparent 82%);
-  mask-image: linear-gradient(180deg, black 0%, black 42%, transparent 100%);
+  left: 1rem;
+  right: 1rem;
+  bottom: -0.35rem;
+  height: 0.5rem;
+  border-radius: 0 0 1.5rem 1.5rem;
+  background: linear-gradient(180deg, oklch(94.8% 0.022 252 / 0.3), transparent);
+  opacity: 0.38;
+  mask-image: radial-gradient(120% 130% at 50% 0%, black 0%, black 54%, transparent 100%);
+  -webkit-mask-image: radial-gradient(120% 130% at 50% 0%, black 0%, black 54%, transparent 100%);
 }
 
 .dark .hc-topbar {
   background:
-    radial-gradient(circle at 50% 100%, rgba(34, 78, 170, 0.16), transparent 34rem),
     rgba(10, 13, 20, 0.92);
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.045);
+  box-shadow: 0 7px 10px rgba(0, 0, 0, 0.16);
 }
 
 .dark .hc-topbar::before {
-  background: rgba(63, 102, 220, 0.22);
-  filter: blur(14px);
-}
-
-.dark .hc-topbar::after {
-  background:
-    radial-gradient(70% 125% at 50% 0%, rgba(28, 52, 116, 0.42), transparent 74%),
-    linear-gradient(180deg, rgba(10, 13, 20, 0.7), transparent 82%);
+  background: linear-gradient(180deg, rgba(10, 13, 20, 0.24), transparent);
+  opacity: 0.3;
 }
 
 .hc-icon-button,

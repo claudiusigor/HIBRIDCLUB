@@ -335,7 +335,7 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
   }
 
   return (
-    <div className="hc-surface overflow-hidden rounded-[22px] border border-black/[0.05] bg-white shadow-[0_6px_8px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.055] dark:shadow-none">
+    <div className="hc-surface hc-glass overflow-hidden rounded-[22px] border border-black/[0.05] bg-white/60 dark:border-white/[0.08] dark:bg-white/[0.055]">
       <div className="border-b border-black/[0.055] px-3.5 py-3 dark:border-white/[0.07]">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">

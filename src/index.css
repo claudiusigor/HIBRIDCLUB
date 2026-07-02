@@ -80,11 +80,14 @@
   position: sticky;
   isolation: isolate;
   overflow: visible;
-  background:
-    linear-gradient(180deg, oklch(96.2% 0.024 255 / 0.96), oklch(94.8% 0.022 252 / 0.9));
+  background: linear-gradient(180deg, oklch(96.2% 0.024 255 / 0.5), oklch(94.8% 0.022 252 / 0.38));
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
   border-bottom: 0 !important;
   border-radius: 0 0 1.25rem 1.25rem;
-  box-shadow: 0 7px 10px oklch(44% 0.055 252 / 0.055);
+  box-shadow: 0 7px 10px oklch(44% 0.055 252 / 0.055), inset 0 1px 0 oklch(100% 0 0 / 0.4);
+  will-change: backdrop-filter;
+  transition: backdrop-filter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.5s, background 0.4s;
 }
 
 .hc-topbar > div {
@@ -108,14 +111,28 @@
 }
 
 .dark .hc-topbar {
-  background:
-    rgba(10, 13, 20, 0.92);
-  box-shadow: 0 7px 10px rgba(0, 0, 0, 0.16);
+  background: rgba(10, 13, 20, 0.5);
+  box-shadow: 0 7px 10px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .dark .hc-topbar::before {
   background: linear-gradient(180deg, rgba(10, 13, 20, 0.24), transparent);
   opacity: 0.3;
+}
+
+/* Top specular sheen — Liquid Glass reflex (color reflection from content below) */
+.hc-topbar::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 42%;
+  border-radius: 0 0 1.25rem 1.25rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.dark .hc-topbar::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 60%);
 }
 
 .hc-icon-button,
@@ -175,8 +192,30 @@
 }
 
 .hc-dock {
-  background: oklch(97% 0.018 252 / 0.94);
-  box-shadow: 0 8px 12px oklch(45% 0.09 252 / 0.16);
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, oklch(97% 0.018 252 / 0.5), oklch(95% 0.016 252 / 0.38));
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  box-shadow: 0 8px 12px oklch(45% 0.09 252 / 0.1), inset 0 1px 0 oklch(100% 0 0 / 0.4);
+  will-change: backdrop-filter;
+  transition: backdrop-filter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.5s, background 0.4s;
+}
+
+.hc-dock > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Top specular sheen — Liquid Glass reflex (color reflection from content above) */
+.hc-dock::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 42%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .hc-surface {
@@ -226,8 +265,12 @@
 }
 
 .dark .hc-dock {
-  background: rgba(16, 20, 30, 0.88);
-  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.32);
+  background: rgba(10, 13, 20, 0.5);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.dark .hc-dock::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 60%);
 }
 
 .dark .hc-surface,
@@ -244,50 +287,89 @@
   background: #2C2C2E;
 }
 
-/* -- Glassmorphism Base -- */
+/* -- Liquid Glass material (iOS 26 aesthetic, CSS translation) -- */
 .glass-card {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.56);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 1),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 10px 36px rgba(15, 23, 42, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.16);
   position: relative;
   overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s, background 0.3s;
 }
 
 .dark .glass-card {
-  background: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
+/* Specular top sheen — paints above bg, below content (z-index:-1 in isolated context) */
 .glass-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 1), transparent);
+  top: 0; left: 0; right: 0; height: 46%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, transparent 58%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .dark .glass-card::before {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 58%);
 }
 
+/* Left edge specular */
 .glass-card::after {
   content: '';
   position: absolute;
   top: 0; left: 0; width: 1px; height: 100%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 1), transparent, rgba(255, 255, 255, 0.5));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent 70%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .dark .glass-card::after {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent, rgba(255, 255, 255, 0.1));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 70%);
+}
+
+/* Interactive morph — subtle scale + accent tint bloom on press */
+.glass-card:active {
+  transform: scale(0.985);
+  box-shadow:
+    0 6px 20px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 0 0 1px rgba(10, 60, 255, 0.10);
+}
+
+/* -- hc-glass modifier: applies Liquid Glass to hc-surface cards -- */
+.hc-glass {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  isolation: isolate;
+  box-shadow:
+    0 10px 36px rgba(15, 23, 42, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s;
+}
+
+.dark .hc-glass {
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.hc-glass:active {
+  transform: scale(0.985);
 }
 
 @keyframes authFadeUp {

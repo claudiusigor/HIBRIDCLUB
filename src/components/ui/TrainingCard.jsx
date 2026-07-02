@@ -24,7 +24,7 @@ export default function TrainingCard({
   ].filter(Boolean);
 
   return (
-    <div className="hc-surface-hero relative overflow-hidden rounded-[22px] border border-black/[0.06] bg-white p-4 shadow-[0_6px_8px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.055] dark:shadow-none">
+    <div className="hc-surface-hero hc-glass relative overflow-hidden rounded-[22px] border border-black/[0.06] bg-white/60 p-4 dark:border-white/[0.08] dark:bg-white/[0.055]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#0A3CFF] via-[#4D7BFF] to-transparent opacity-80 dark:opacity-70" />
 
       <div className="flex items-start gap-3">

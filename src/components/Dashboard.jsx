@@ -295,7 +295,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
 
   return (
     <div className="hc-app-shell min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white">
-      <header className="hc-topbar sticky top-0 z-40 bg-[#F5F7FB]/94 pb-4 pt-4 backdrop-blur-xl dark:bg-[#0A0D14]/92">
+      <header className="hc-topbar sticky top-0 z-40 pb-4 pt-4">
         <div className="mx-auto w-full max-w-[430px] px-5">
         <div className="mb-3 grid grid-cols-[44px_1fr_44px] items-center">
           <div>
@@ -443,7 +443,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
       </main>
 
       <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2 px-1">
-        <nav className="hc-dock rounded-[24px] border border-black/[0.04] bg-white/92 px-3 py-2 shadow-[0_8px_12px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#10141E]/88 dark:shadow-[0_8px_12px_rgba(0,0,0,0.32)]">
+        <nav className="hc-dock rounded-[24px] border border-black/[0.04] px-3 py-2 dark:border-white/[0.08]">
           <div className="grid grid-cols-5 gap-1">
             {DOCK_ITEMS.map((item) => {
               const isActive = activeTab === item.id;

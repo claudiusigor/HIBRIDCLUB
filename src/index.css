@@ -80,12 +80,12 @@
   position: sticky;
   isolation: isolate;
   overflow: visible;
-  background: linear-gradient(180deg, oklch(96.2% 0.024 255 / 0.5), oklch(94.8% 0.022 252 / 0.38));
+  background: linear-gradient(180deg, oklch(96.2% 0.024 255 / 0.3), oklch(94.8% 0.022 252 / 0.2));
   backdrop-filter: blur(28px) saturate(200%);
   -webkit-backdrop-filter: blur(28px) saturate(200%);
   border-bottom: 0 !important;
   border-radius: 0 0 1.25rem 1.25rem;
-  box-shadow: 0 7px 10px oklch(44% 0.055 252 / 0.055), inset 0 1px 0 oklch(100% 0 0 / 0.4);
+  box-shadow: 0 10px 22px -8px oklch(44% 0.055 252 / 0.14), inset 0 1px 0 oklch(100% 0 0 / 0.4), inset 0 -1px 0 oklch(60% 0.03 252 / 0.22);
   will-change: backdrop-filter;
   transition: backdrop-filter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.5s, background 0.4s;
 }
@@ -111,8 +111,8 @@
 }
 
 .dark .hc-topbar {
-  background: rgba(10, 13, 20, 0.5);
-  box-shadow: 0 7px 10px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: rgba(10, 13, 20, 0.3);
+  box-shadow: 0 10px 22px -8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .dark .hc-topbar::before {
@@ -194,7 +194,7 @@
 .hc-dock {
   position: relative;
   isolation: isolate;
-  background: linear-gradient(180deg, oklch(97% 0.018 252 / 0.5), oklch(95% 0.016 252 / 0.38));
+  background: linear-gradient(180deg, oklch(97% 0.018 252 / 0.3), oklch(95% 0.016 252 / 0.2));
   backdrop-filter: blur(28px) saturate(200%);
   -webkit-backdrop-filter: blur(28px) saturate(200%);
   box-shadow: 0 8px 12px oklch(45% 0.09 252 / 0.1), inset 0 1px 0 oklch(100% 0 0 / 0.4);
@@ -265,7 +265,7 @@
 }
 
 .dark .hc-dock {
-  background: rgba(10, 13, 20, 0.5);
+  background: rgba(10, 13, 20, 0.3);
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 

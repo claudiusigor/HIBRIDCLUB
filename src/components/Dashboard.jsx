@@ -13,6 +13,7 @@ import {
   CalendarDays,
   ClipboardList,
   BedDouble,
+  Trophy,
 } from 'lucide-react';
 import { workoutPlan } from '../data/workoutPlan';
 import { DEFAULT_WEEK_ORDER, getWeekdayKeyFromDate, normalizePlanModel } from '../services/plans';
@@ -24,11 +25,12 @@ const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const NutritionPage = lazy(() => import('./pages/NutritionPage'));
 const PlanPage = lazy(() => import('./pages/PlanPage'));
+const RankingPage = lazy(() => import('./pages/RankingPage'));
 const THEME_STORAGE_KEY = 'hyperactive-theme';
 const DARK_THEME_COLOR = '#0A0D14';
 const LIGHT_THEME_COLOR = '#F5F7FB';
 
-const TABS = { HOME: 'home', STATS: 'stats', NUTRITION: 'nutrition', HISTORY: 'history', PLAN: 'plan' };
+const TABS = { HOME: 'home', STATS: 'stats', NUTRITION: 'nutrition', HISTORY: 'history', PLAN: 'plan', RANKING: 'ranking' };
 const WEEKDAY_VIEW = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
 const WEEKDAY_LABELS = {
   SEG: 'SEG',
@@ -55,6 +57,7 @@ const DOCK_ITEMS = [
   { id: TABS.NUTRITION, Icon: Droplets, label: 'Água', iconSize: 20 },
   { id: TABS.HISTORY, Icon: CalendarDays, label: 'Histórico', iconSize: 20 },
   { id: TABS.PLAN, Icon: ClipboardList, label: 'Plano', iconSize: 21 },
+  { id: TABS.RANKING, Icon: Trophy, label: 'Ranking', iconSize: 20 },
 ];
 
 const toDateKey = (date) => {
@@ -290,6 +293,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     if (activeTab === TABS.PLAN) {
       return <PlanPage plan={currentPlan} userId={user?.id} onPlanUpdated={(nextPlan) => setCurrentPlan(normalizePlanModel(nextPlan))} />;
     }
+    if (activeTab === TABS.RANKING) return <RankingPage userId={user?.id} />;
     return null;
   }, [activeTab, currentPlan, user?.id]);
 
@@ -444,7 +448,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
 
       <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2 px-1">
         <nav className="hc-dock rounded-[24px] border border-black/[0.04] px-3 py-2 dark:border-white/[0.08]">
-          <div className="grid grid-cols-5 gap-1">
+          <div className="grid grid-cols-6 gap-1">
             {DOCK_ITEMS.map((item) => {
               const isActive = activeTab === item.id;
               return (
@@ -458,7 +462,14 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                   }`}
                 >
                   <item.Icon size={item.iconSize} strokeWidth={1.9} className={`${isActive ? 'text-white' : 'text-[#546173] dark:text-[#9AA7BC]'}`} />
-                  <span className={`mt-1 text-[0.6875rem] font-semibold leading-4 ${isActive ? 'text-white/92' : ''}`}>{item.label}</span>
+                  {item.id === TABS.RANKING ? (
+                    <span className="mt-1 flex flex-col items-center leading-none">
+                      <span className={`whitespace-nowrap text-[0.6875rem] font-semibold leading-4 ${isActive ? 'text-white/92' : ''}`}>Ranking</span>
+                      <span className="mt-0.5 rounded-full bg-amber-400/90 px-1.5 py-px text-[0.5rem] font-semibold leading-none text-amber-950">Em breve</span>
+                    </span>
+                  ) : (
+                    <span className={`mt-1 whitespace-nowrap text-[0.6875rem] font-semibold leading-4 ${isActive ? 'text-white/92' : ''}`}>{item.label}</span>
+                  )}
                 </button>
               );
             })}

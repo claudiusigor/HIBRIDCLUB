@@ -111,6 +111,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
   const [isInstallAvailable, setIsInstallAvailable] = useState(false);
   const [completedWeekdays, setCompletedWeekdays] = useState({});
   const [weeklyProgress, setWeeklyProgress] = useState({});
+  const [progressVersion, setProgressVersion] = useState(0);
   const weekOrder = currentPlan.weekOrder || DEFAULT_WEEK_ORDER;
   const weekDateByWeekday = getCurrentWeekDateKeysByWeekday();
 
@@ -257,7 +258,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
       window.removeEventListener('focus', loadWeeklyCompletion);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [activeTab, user?.id, weekOrder]);
+  }, [activeTab, user?.id, weekOrder, progressVersion]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -434,6 +435,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
             todayWeekdayKey={todayWeekdayKey}
             selectedWeekdayCompleted={Boolean(completedWeekdays[selectedWeekday])}
             selectedWeekdayProgress={weeklyProgress[selectedWeekday] || { hasAnySession: false, loggedExercises: 0 }}
+            onProgressChange={() => setProgressVersion((v) => v + 1)}
           />
         )}
 
@@ -492,7 +494,7 @@ function getDayStatus({
   }
 
   if (isTodaySelected) {
-    if (selectedWeekdayCompleted || (targetExercises > 0 && loggedExercises >= targetExercises)) {
+    if (targetExercises > 0 && loggedExercises >= targetExercises) {
       return {
         title: 'Treino concluído',
         description: 'Sessão finalizada hoje. Ótimo trabalho.',
@@ -518,12 +520,21 @@ function getDayStatus({
     };
   }
 
-  if (selectedWeekdayCompleted) {
+  if (targetExercises > 0 && loggedExercises >= targetExercises) {
     return {
       title: 'Treino concluído',
       description: 'Você já registrou essa sessão no histórico semanal.',
       icon: CircleCheckBig,
       tone: 'done',
+    };
+  }
+
+  if (selectedWeekdayCompleted) {
+    return {
+      title: 'Em andamento',
+      description: 'Sessão parcialmente registrada neste dia.',
+      icon: CircleDashed,
+      tone: 'progress',
     };
   }
 
@@ -545,6 +556,7 @@ function HomeContent({
   todayWeekdayKey,
   selectedWeekdayCompleted,
   selectedWeekdayProgress,
+  onProgressChange,
 }) {
   const isTodaySelected = selectedWeekday === todayWeekdayKey;
   const targetExercises = activeWorkout?.exercises?.length || 0;
@@ -605,6 +617,7 @@ function HomeContent({
             exercises={activeWorkout.exercises || []}
             workoutId={selectedWorkoutId || 'REST'}
             targetDateKey={selectedDateKey}
+            onProgressChange={onProgressChange}
           />
         ) : (
           <div className="hc-surface rounded-[20px] border border-black/[0.05] bg-white px-4 py-5 text-center text-[0.875rem] text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400">

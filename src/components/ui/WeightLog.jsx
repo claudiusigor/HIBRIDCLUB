@@ -184,7 +184,7 @@ function LogItem({ ex, workoutId, isDone, onDone, targetDateKey, savedEntry, for
   );
 }
 
-export default function WeightLog({ exercises = [], workoutId, targetDateKey }) {
+export default function WeightLog({ exercises = [], workoutId, targetDateKey, onProgressChange }) {
   const [expanded, setExpanded] = useState(false);
   const [completedExercises, setCompletedExercises] = useState({});
   const [isReviewing, setIsReviewing] = useState(false);
@@ -284,6 +284,9 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey }) 
         ...previous,
         [exerciseId]: true,
       }));
+    }
+    if (typeof onProgressChange === 'function') {
+      onProgressChange();
     }
   };
 

@@ -1,21 +1,32 @@
 <!doctype html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/HIBRIDCLUB/iconpwa.png" />
-    <link rel="apple-touch-icon" href="/HIBRIDCLUB/iconpwa.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href="/iconpwa.png" />
+    <link rel="apple-touch-icon" href="/iconpwa.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#0D0D0D" />
+    <meta name="theme-color" content="#0A0D14" />
     <title>Hyperactive Fit</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/HIBRIDCLUB/assets/index-Dibtp24B.js"></script>
-    <link rel="stylesheet" crossorigin href="/HIBRIDCLUB/assets/index-B4ngqd79.css">
-  <link rel="manifest" href="/HIBRIDCLUB/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/HIBRIDCLUB/registerSW.js"></script></head>
+    <script>
+      (() => {
+        const storageKey = 'hyperactive-theme';
+        const savedTheme = window.localStorage.getItem(storageKey);
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+        document.documentElement.classList.toggle('dark', isDark);
+        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeColorMeta) {
+          themeColorMeta.setAttribute('content', isDark ? '#0A0D14' : '#F5F7FB');
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-VOrFRkrb.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dpfr8KFz.css">
+  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
   <body>
     <div id="root"></div>
   </body>

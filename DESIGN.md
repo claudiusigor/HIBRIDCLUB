@@ -80,6 +80,7 @@ The app uses a mobile-first premium fitness interface with glassmorphism, strong
 Color values found in the codebase:
 
 - Primary blue: `#0A3CFF`
+- Achievement pink: `#FE0972` (champions, badges, titles and earned states)
 - Light app background: `#F2F2F7`
 - Light theme meta background: `#F5F7FB`
 - Dark app background: `#0A0D14`
@@ -89,7 +90,7 @@ Color values found in the codebase:
 - Light card: `#FFFFFF`
 - Light surface: `#E5E5EA`
 - Light separator: `#C6C6C8`
-- Lime accent in Tailwind config: `#D0FD3E`, `#BDF914`
+- Legacy lime tokens in Tailwind config: `#D0FD3E`, `#BDF914` (do not use in the ranking)
 
 Typography:
 
@@ -105,6 +106,8 @@ Component patterns:
 - Bottom dock tabs: Inicio, Cardio, Agua, Historico, Plano.
 - Buttons use strong blue fills, compact labels, and mobile tap targets.
 - Status copy is concise and action-oriented.
+- The ranking uses dark arena surfaces, blue for position/navigation and pink
+  `#FE0972` for achievement. Pink is earned-state color, not decoration.
 
 ## Design Rules For Future Changes
 

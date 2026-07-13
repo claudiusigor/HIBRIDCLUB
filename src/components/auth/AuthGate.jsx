@@ -20,7 +20,6 @@ import {
 import {
   completeUserProfile,
   deriveDisplayNameFromUser,
-  getProfile,
   ensureUserProfile,
   isProfileSetupComplete,
 } from '../../services/profile';
@@ -249,7 +248,7 @@ export default function AuthGate() {
       const promise = withTimeout(
         (async () => {
           const plan = await ensureUserPlan(user, { autoCreate: false });
-          const profile = (await getProfile(user.id)) || (await ensureUserProfile(user));
+          const profile = await ensureUserProfile(user);
           return { profile, plan };
         })(),
         PLAN_PREPARE_TIMEOUT_MS,
@@ -741,6 +740,11 @@ export default function AuthGate() {
         onEditProfile={() => {
           setProfileSetupMode('edit');
           setStage(STAGES.NEEDS_PROFILE_SETUP);
+        }}
+        onProfileUpdated={(updatedProfile) => {
+          if (!updatedProfile || !session?.user?.id) return;
+          setUserProfile(updatedProfile);
+          writeSessionCache(PROFILE_CACHE_PREFIX, session.user.id, updatedProfile);
         }}
         onSignOut={handleSignOut}
       />

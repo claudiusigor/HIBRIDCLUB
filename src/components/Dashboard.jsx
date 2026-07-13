@@ -1,9 +1,10 @@
-﻿import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Sun,
   Moon,
   CircleCheckBig,
   CircleDashed,
+  Camera,
   Download,
   LogOut,
   User,
@@ -14,10 +15,13 @@ import {
   ClipboardList,
   BedDouble,
   Trophy,
+  Flame,
+  Sparkles,
 } from 'lucide-react';
 import { workoutPlan } from '../data/workoutPlan';
 import { DEFAULT_WEEK_ORDER, getWeekdayKeyFromDate, normalizePlanModel } from '../services/plans';
-import { getLastStorageError, getWorkoutHistory, hasWorkoutSessions } from '../services/storage';
+import { uploadProfileAvatar } from '../services/profile';
+import { getLastStorageError, getWorkoutHistory, getWorkoutSessions, hasWorkoutSessions } from '../services/storage';
 import TrainingCard from './ui/TrainingCard';
 import WeightLog from './ui/WeightLog';
 
@@ -102,7 +106,65 @@ function getGreeting(name) {
   return `Boa noite, ${name}`;
 }
 
-export default function Dashboard({ plan = workoutPlan, user, userProfile, onEditProfile, onSignOut }) {
+const isValidDateKey = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+
+function getMonthDatePrefix(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+function getDateKeyFromDate(date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getTrainingProfileStats(history = {}) {
+  const monthPrefix = getMonthDatePrefix();
+  const trainedDates = Object.keys(history || {})
+    .filter((dateKey) => isValidDateKey(dateKey) && hasWorkoutSessions(history[dateKey]))
+    .sort();
+  const monthDays = trainedDates.filter((dateKey) => dateKey.startsWith(monthPrefix)).length;
+  const monthWorkoutIds = new Set();
+
+  trainedDates
+    .filter((dateKey) => dateKey.startsWith(monthPrefix))
+    .forEach((dateKey) => {
+      getWorkoutSessions(history[dateKey]).forEach((session) => {
+        if (session?.workoutId) monthWorkoutIds.add(session.workoutId);
+      });
+    });
+
+  let streak = 0;
+  const trainedSet = new Set(trainedDates);
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  if (!trainedSet.has(getDateKeyFromDate(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  while (trainedSet.has(getDateKeyFromDate(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return {
+    monthDays,
+    streak,
+    points: monthDays * 100 + streak * 25 + monthWorkoutIds.size * 10,
+  };
+}
+
+function getInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'AT';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+export default function Dashboard({ plan = workoutPlan, user, userProfile, onEditProfile, onProfileUpdated, onSignOut }) {
   const [currentPlan, setCurrentPlan] = useState(() => normalizePlanModel(plan));
   const [activeTab, setActiveTab] = useState(TABS.HOME);
   const [selectedWeekday, setSelectedWeekday] = useState(() => {
@@ -115,12 +177,29 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
   const [completedWeekdays, setCompletedWeekdays] = useState({});
   const [weeklyProgress, setWeeklyProgress] = useState({});
   const [progressVersion, setProgressVersion] = useState(0);
+  const [profileStats, setProfileStats] = useState({ monthDays: 0, streak: 0, points: 0 });
+  const [isProfileExpanded, setIsProfileExpanded] = useState(false);
+  const [profilePullProgress, setProfilePullProgress] = useState(0);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
+  const [isProfileAvatarUploading, setIsProfileAvatarUploading] = useState(false);
+  const [profileAvatarMessage, setProfileAvatarMessage] = useState('');
+  const [profileAvatarVersion, setProfileAvatarVersion] = useState(0);
+  const profilePhotoInputRef = useRef(null);
+  const profilePullStartRef = useRef(null);
+  const profilePullValueRef = useRef(0);
+  const profilePullPointerIdRef = useRef(null);
+  const profilePullMovedRef = useRef(false);
+  const profilePullIgnoreClickRef = useRef(false);
   const weekOrder = currentPlan.weekOrder || DEFAULT_WEEK_ORDER;
   const weekDateByWeekday = getCurrentWeekDateKeysByWeekday();
 
   useEffect(() => {
     setCurrentPlan(normalizePlanModel(plan));
   }, [plan]);
+
+  useEffect(() => {
+    setProfilePhotoUrl(userProfile?.avatar_url || user?.user_metadata?.avatar_url || '');
+  }, [user?.id, user?.user_metadata?.avatar_url, userProfile?.avatar_url]);
 
   useEffect(() => {
     const todayKey = getWeekdayKeyFromDate();
@@ -209,6 +288,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     if (!user?.id) {
       setCompletedWeekdays({});
       setWeeklyProgress({});
+      setProfileStats({ monthDays: 0, streak: 0, points: 0 });
       return;
     }
 
@@ -218,6 +298,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     const loadWeeklyCompletion = async () => {
       const history = await getWorkoutHistory();
       if (!mounted) return;
+      setProfileStats(getTrainingProfileStats(history));
       const storageError = getLastStorageError();
       if (storageError?.context === 'getWorkoutHistory') {
         return;
@@ -271,10 +352,116 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     setIsInstallAvailable(false);
   };
 
+  const setProfileRevealProgress = (nextProgress) => {
+    const boundedProgress = Math.max(0, Math.min(1, nextProgress));
+    profilePullValueRef.current = boundedProgress;
+    setProfilePullProgress(boundedProgress);
+  };
+
+  const revealProfile = (progress = 1) => {
+    const shouldExpand = progress >= 0.38;
+    setIsProfileExpanded(shouldExpand);
+    setProfileRevealProgress(shouldExpand ? 1 : 0);
+  };
+
+  const handleProfilePullStart = (event) => {
+    if (!event.isPrimary) return;
+    if (event.button != null && event.button !== 0) return;
+    profilePullPointerIdRef.current = event.pointerId;
+    profilePullMovedRef.current = false;
+    profilePullStartRef.current = { y: event.clientY, progress: isProfileExpanded ? 1 : 0 };
+    profilePullValueRef.current = isProfileExpanded ? 1 : 0;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handleProfilePullMove = (event) => {
+    if (profilePullPointerIdRef.current !== event.pointerId) return;
+    const start = profilePullStartRef.current;
+    if (!start) return;
+    const delta = event.clientY - start.y;
+    if (Math.abs(delta) > 6) {
+      profilePullMovedRef.current = true;
+      event.preventDefault();
+    }
+    if (delta <= -24) {
+      const closingProgress = Math.max(0, start.progress + delta / 118);
+      setProfileRevealProgress(closingProgress);
+      return;
+    }
+    if (delta < 4 && start.progress === 0) return;
+    const nextProgress = Math.max(0, Math.min(1, start.progress + delta / 112));
+    setProfileRevealProgress(nextProgress);
+  };
+
+  const handleProfilePullEnd = (event) => {
+    if (profilePullPointerIdRef.current !== event.pointerId) return;
+    if (!profilePullStartRef.current) return;
+    profilePullStartRef.current = null;
+    profilePullPointerIdRef.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    if (profilePullMovedRef.current) {
+      profilePullIgnoreClickRef.current = true;
+      revealProfile(profilePullValueRef.current);
+    }
+    profilePullMovedRef.current = false;
+  };
+
+  const toggleProfileExpansion = (event) => {
+    if (profilePullIgnoreClickRef.current) {
+      event?.preventDefault();
+      profilePullIgnoreClickRef.current = false;
+      return;
+    }
+    const nextExpanded = !isProfileExpanded;
+    setIsProfileExpanded(nextExpanded);
+    setProfileRevealProgress(nextExpanded ? 1 : 0);
+  };
+
+  const handleProfilePhotoChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    if (!user?.id) {
+      setProfileAvatarMessage('Entre na conta para salvar sua foto.');
+      event.target.value = '';
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setProfilePhotoUrl(previewUrl);
+    setIsProfileAvatarUploading(true);
+    setProfileAvatarMessage('Enviando foto...');
+
+    try {
+      const updatedProfile = await uploadProfileAvatar(user.id, file);
+      const nextAvatarUrl = updatedProfile?.avatar_url || '';
+      setProfilePhotoUrl(nextAvatarUrl);
+      setProfileAvatarMessage('Foto atualizada no ranking.');
+      setProfileAvatarVersion((value) => value + 1);
+      onProfileUpdated?.(updatedProfile);
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(`hibrid-profile-photo:${user.id}`);
+      }
+    } catch (error) {
+      setProfilePhotoUrl(userProfile?.avatar_url || user?.user_metadata?.avatar_url || '');
+      setProfileAvatarMessage(error.message || 'Não foi possível salvar a foto.');
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      setIsProfileAvatarUploading(false);
+      event.target.value = '';
+    }
+  };
+
   const selectedWorkoutId = weekOrder[selectedWeekday] || null;
   const activeWorkout = selectedWorkoutId ? currentPlan.schedule[selectedWorkoutId] : null;
   const todayWeekdayKey = getWeekdayKeyFromDate();
-  const greeting = getGreeting(getDisplayName(userProfile, user));
+  const displayName = getDisplayName(userProfile, user);
+  const greeting = getGreeting(displayName);
+  const firstName = displayName.split(/\s+/).filter(Boolean)[0] || 'Atleta';
+  const profileProgress = Math.max(profilePullProgress, isProfileExpanded ? 1 : 0);
+  const profilePanelStyle = {
+    '--profile-reveal': profileProgress.toFixed(3),
+  };
 
   const daySlots = WEEKDAY_VIEW.map((weekdayKey) => {
     const workoutId = weekOrder[weekdayKey] || null;
@@ -293,15 +480,18 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     if (activeTab === TABS.PLAN) {
       return <PlanPage plan={currentPlan} userId={user?.id} onPlanUpdated={(nextPlan) => setCurrentPlan(normalizePlanModel(nextPlan))} />;
     }
-    if (activeTab === TABS.RANKING) return <RankingPage userId={user?.id} />;
+    if (activeTab === TABS.RANKING) return <RankingPage userId={user?.id} viewerAvatarUrl={profilePhotoUrl} avatarRefreshKey={profileAvatarVersion} />;
     return null;
-  }, [activeTab, currentPlan, user?.id]);
+  }, [activeTab, currentPlan, profileAvatarVersion, profilePhotoUrl, user?.id]);
 
   return (
     <div className="hc-app-shell min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white">
-      <header className="hc-topbar sticky top-0 z-40 pb-4 pt-4">
+      <header
+        className={`hc-topbar sticky top-0 z-40 pb-4 pt-4 ${activeTab === TABS.HOME ? '' : 'hc-topbar--condensed'} ${isProfileExpanded ? 'hc-topbar--profile-open' : ''}`}
+        style={profilePanelStyle}
+      >
         <div className="mx-auto w-full max-w-[430px] px-5">
-        <div className="mb-3 grid grid-cols-[44px_1fr_44px] items-center">
+        <div className="hc-logo-row mb-3 grid grid-cols-[44px_1fr_44px] items-center">
           <div>
             {user && onSignOut ? (
               <button
@@ -323,7 +513,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
               decoding="async"
               width="320"
               height="214"
-              className="h-auto max-h-[74px] w-auto object-contain sm:max-h-[84px]"
+              className="hc-topbar-logo h-auto max-h-[74px] w-auto object-contain sm:max-h-[84px]"
             />
           </div>
           <button
@@ -335,8 +525,87 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
           </button>
         </div>
 
-        {activeTab === TABS.HOME && (
-          <>
+        <div className="hc-profile-reveal" aria-hidden={!isProfileExpanded && profileProgress < 0.08}>
+          <div className="hc-profile-reveal-inner">
+            <section className="hc-profile-card" aria-label="Perfil do atleta">
+              <div className="hc-profile-orbit" aria-hidden="true" />
+              <div className="relative flex flex-col items-center">
+                <input
+                  ref={profilePhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={handleProfilePhotoChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => profilePhotoInputRef.current?.click()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  disabled={isProfileAvatarUploading}
+                  className="hc-profile-avatar group disabled:cursor-wait"
+                  aria-label="Escolher foto de perfil"
+                >
+                  {profilePhotoUrl ? (
+                    <img src={profilePhotoUrl} alt="Foto de perfil" className="h-full w-full rounded-full object-cover" />
+                  ) : (
+                    <span>{getInitials(displayName)}</span>
+                  )}
+                  <span className="hc-profile-camera">
+                    <Camera size={13} strokeWidth={2.2} />
+                  </span>
+                </button>
+                <p className="mt-2 text-[12px] font-medium leading-none text-[#64748B] dark:text-white/46">Atleta Hybrid</p>
+                <h2 className="mt-1 max-w-[260px] truncate text-center text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[#111827] dark:text-white">
+                  {displayName}
+                </h2>
+                <p className="mt-1 text-center text-[11px] font-medium text-[#0A3CFF] dark:text-[#FE0972]">
+                  {firstName}, mantenha o ritmo sem perder controle.
+                </p>
+                {profileAvatarMessage && (
+                  <p className="mt-1 text-center text-[10px] font-medium text-[#64748B] dark:text-white/42">
+                    {profileAvatarMessage}
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="hc-profile-stat">
+                  <Flame size={14} className="text-[#0A3CFF] dark:text-[#FE0972]" />
+                  <strong>{profileStats.streak}</strong>
+                  <span>dias seguidos</span>
+                </div>
+                <div className="hc-profile-stat">
+                  <CircleCheckBig size={14} className="text-[#0A3CFF] dark:text-[#FE0972]" />
+                  <strong>{profileStats.monthDays}</strong>
+                  <span>dias no mês</span>
+                </div>
+                <div className="hc-profile-stat">
+                  <Sparkles size={14} className="text-[#0A3CFF] dark:text-[#FE0972]" />
+                  <strong>{profileStats.points}</strong>
+                  <span>pontos mensais</span>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="hc-profile-pull-handle"
+          onClick={toggleProfileExpansion}
+          onPointerDown={handleProfilePullStart}
+          onPointerMove={handleProfilePullMove}
+          onPointerUp={handleProfilePullEnd}
+          onPointerCancel={handleProfilePullEnd}
+          aria-expanded={isProfileExpanded}
+          aria-label={isProfileExpanded ? "Recolher perfil" : "Puxar perfil"}
+        >
+          <span />
+        </button>
+
+        <div className="hc-topbar-collapsible" aria-hidden={activeTab !== TABS.HOME}>
+          <div className="hc-topbar-collapsible-inner">
+          <div className="hc-topbar-collapsible-content">
             <div className="mb-2 flex items-center justify-between px-1">
               <p className="text-[0.8125rem] font-medium leading-5 text-gray-500 dark:text-gray-400">{greeting}</p>
               {onEditProfile && (
@@ -388,8 +657,8 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                           <span
                             className={`hc-complete-dot h-2 w-2 rounded-full ${
                               isActive
-                                ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.2)]'
-                                : 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]'
+                                ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.2)] dark:bg-[#FE0972] dark:shadow-[0_0_0_4px_rgba(254,9,114,0.22)]'
+                                : 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)] dark:bg-[#FE0972] dark:shadow-[0_0_0_3px_rgba(254,9,114,0.18)]'
                             }`}
                           />
                         ) : isCardioDay ? (
@@ -422,8 +691,9 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                 })}
               </div>
             </div>
-          </>
-        )}
+          </div>
+          </div>
+        </div>
         </div>
       </header>
 
@@ -462,14 +732,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                   }`}
                 >
                   <item.Icon size={item.iconSize} strokeWidth={1.9} className={`${isActive ? 'text-white' : 'text-[#546173] dark:text-[#9AA7BC]'}`} />
-                  {item.id === TABS.RANKING ? (
-                    <span className="mt-1 flex flex-col items-center leading-none">
-                      <span className={`whitespace-nowrap text-[0.6875rem] font-semibold leading-4 ${isActive ? 'text-white/92' : ''}`}>Ranking</span>
-                      <span className="mt-0.5 rounded-full bg-amber-400/90 px-1.5 py-px text-[0.5rem] font-semibold leading-none text-amber-950">Em breve</span>
-                    </span>
-                  ) : (
-                    <span className={`mt-1 whitespace-nowrap text-[0.6875rem] font-semibold leading-4 ${isActive ? 'text-white/92' : ''}`}>{item.label}</span>
-                  )}
+                  <span className={`mt-1 whitespace-nowrap text-[0.6875rem] font-semibold leading-4 ${isActive ? 'text-white/92' : ''}`}>{item.label}</span>
                 </button>
               );
             })}
@@ -582,7 +845,7 @@ function HomeContent({
   const DayStatusIcon = dayStatus.icon;
   const dayStatusToneClass =
     dayStatus.tone === 'done'
-      ? 'bg-emerald-500/14 text-emerald-600 dark:bg-emerald-500/18 dark:text-emerald-300'
+      ? 'bg-emerald-500/14 text-emerald-600 dark:bg-[#FE0972]/18 dark:text-[#FF7DB3]'
       : dayStatus.tone === 'progress'
         ? 'bg-[#0A3CFF]/12 text-[#0A3CFF] dark:bg-[#0A3CFF]/22 dark:text-[#AFC5FF]'
         : 'bg-gray-500/14 text-gray-600 dark:bg-white/[0.1] dark:text-gray-300';

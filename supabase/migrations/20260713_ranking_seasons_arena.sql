@@ -295,12 +295,12 @@ begin
       from public.ranking_season_results existing
       where existing.season_id = rs.id
     )
-  on conflict (season_id, user_id) do nothing;
+  on conflict on constraint ranking_season_results_season_id_user_id_key do nothing;
 
   insert into public.ranking_position_snapshots (season_id, user_id, snapshot_date, rank, points)
   select v_current_season_id, snap.user_id, v_today, snap.rank, snap.points
   from public.get_ranking_period_snapshot(v_current_start) snap
-  on conflict (season_id, user_id, snapshot_date)
+  on conflict on constraint ranking_position_snapshots_pkey
   do update set rank = excluded.rank, points = excluded.points;
 
   return query

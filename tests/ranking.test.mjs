@@ -15,6 +15,10 @@ const rankingMigration = readFileSync(
   new URL('../supabase/migrations/20260713_ranking_seasons_arena.sql', import.meta.url),
   'utf8',
 );
+const rankingHotfix = readFileSync(
+  new URL('../supabase/migrations/20260713_fix_ranking_user_id_ambiguity.sql', import.meta.url),
+  'utf8',
+);
 
 test('calcula a pontuacao oficial sem divergencia', () => {
   assert.equal(RANKING_SCORING.trainingDay, 100);
@@ -28,6 +32,14 @@ test('mantem o contrato de pontuacao alinhado entre cliente e Supabase', () => {
   assert.match(rankingMigration, /month_days, 0\) \* rules\.training_day_points/);
   assert.match(rankingMigration, /st\.streak, 0\) \* rules\.active_streak_day_points/);
   assert.match(rankingMigration, /mv\.workout_variety, 0\) \* rules\.workout_variety_points/);
+});
+
+test('evita referencia ambigua a user_id nos conflitos da RPC', () => {
+  for (const sql of [rankingMigration, rankingHotfix]) {
+    assert.doesNotMatch(sql, /on conflict \(season_id, user_id/);
+    assert.match(sql, /on conflict on constraint ranking_season_results_season_id_user_id_key/);
+    assert.match(sql, /on conflict on constraint ranking_position_snapshots_pkey/);
+  }
 });
 
 test('nao permite pontuacao ou metricas negativas no cliente', () => {

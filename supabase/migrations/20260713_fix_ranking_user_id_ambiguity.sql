@@ -120,9 +120,6 @@ begin
     end as division,
     ceil((snap.rank::numeric / greatest(snap.total_athletes, 1)) * 100)::int as percentile,
     case
-      when snap.rank = 1 then 'Campeão da temporada'
-      when snap.rank <= 3 then 'Finalista'
-      when snap.rank <= 10 then 'Elite do mês'
       when snap.streak >= 14 then 'Atleta consistente'
       when snap.workout_variety >= 4 then 'Híbrido completo'
       else null
@@ -130,10 +127,7 @@ begin
     array_remove(array[
       case when snap.month_days >= 10 then 'consistency_10' end,
       case when snap.streak >= 7 then 'streak_7' end,
-      case when snap.workout_variety >= 4 then 'hybrid_complete' end,
-      case when snap.rank <= 10 then 'top_10' end,
-      case when snap.rank <= 3 then 'podium' end,
-      case when snap.rank = 1 then 'champion' end
+      case when snap.workout_variety >= 4 then 'hybrid_complete' end
     ], null) as badges
   from public.get_ranking_period_snapshot(v_current_start) snap
   left join lateral (

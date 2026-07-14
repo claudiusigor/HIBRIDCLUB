@@ -13,6 +13,8 @@ export const RANKING_BADGES = Object.freeze([
   'champion',
 ]);
 
+export const FINAL_PLACEMENT_BADGES = Object.freeze(['top_10', 'podium', 'champion']);
+
 const nonNegativeInteger = (value) => Math.max(0, Math.trunc(Number(value) || 0));
 
 export function getWorkoutVariety(entry) {
@@ -44,18 +46,28 @@ export function getDivision(rank, totalAthletes) {
   return 'Desafiante';
 }
 
+export function getCurrentTitle(entry) {
+  if (nonNegativeInteger(entry?.streak) >= 14) return 'Atleta consistente';
+  if (getWorkoutVariety(entry) >= 4) return 'Híbrido completo';
+  return null;
+}
+
 export function getCurrentBadges(entry) {
+  const seasonFinalized = Boolean(entry?.season_finalized || entry?.final_rank);
   if (Array.isArray(entry?.badges)) {
-    return [...new Set(entry.badges.filter((badge) => RANKING_BADGES.includes(badge)))];
+    return [...new Set(entry.badges.filter((badge) => (
+      RANKING_BADGES.includes(badge)
+      && (seasonFinalized || !FINAL_PLACEMENT_BADGES.includes(badge))
+    )))];
   }
 
   const badges = [];
   if (nonNegativeInteger(entry?.month_days) >= 10) badges.push('consistency_10');
   if (getWorkoutVariety(entry) >= 4) badges.push('hybrid_complete');
   if (nonNegativeInteger(entry?.streak) >= 7) badges.push('streak_7');
-  if (nonNegativeInteger(entry?.rank) > 0 && nonNegativeInteger(entry.rank) <= 10) badges.push('top_10');
-  if (nonNegativeInteger(entry?.rank) > 0 && nonNegativeInteger(entry.rank) <= 3) badges.push('podium');
-  if (nonNegativeInteger(entry?.rank) === 1) badges.push('champion');
+  if (seasonFinalized && nonNegativeInteger(entry?.rank) > 0 && nonNegativeInteger(entry.rank) <= 10) badges.push('top_10');
+  if (seasonFinalized && nonNegativeInteger(entry?.rank) > 0 && nonNegativeInteger(entry.rank) <= 3) badges.push('podium');
+  if (seasonFinalized && nonNegativeInteger(entry?.rank) === 1) badges.push('champion');
   return badges;
 }
 
@@ -80,6 +92,7 @@ export function normalizeRanking(data = [], userId, viewerAvatarUrl = '') {
       avatar_url: isViewer && viewerAvatarUrl && !raw.avatar_url ? viewerAvatarUrl : raw.avatar_url,
       percentile: nonNegativeInteger(raw.percentile) || getRankPercentile(rank, total),
       division: raw.division || getDivision(rank, total),
+      title: getCurrentTitle(raw),
       badges: getCurrentBadges({ ...raw, rank }),
     };
   });

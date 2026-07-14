@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Check, CircleCheckBig, PencilLine } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, CircleCheckBig, Pause, PencilLine, Play, RotateCcw } from 'lucide-react';
 import { getNormalizedWorkoutEntry, getPreviousWorkoutEntry, getWorkoutHistory, saveWorkoutLog } from '../../services/storage';
 
 const REORDER_DELAY_MS = 650;
@@ -12,7 +12,9 @@ const formatLogValue = (value, unit) => {
   return `${displayValue} ${unit}`;
 };
 
-function LogItem({ ex, workoutId, isDone, onDone, targetDateKey, savedEntry, forceEditMode, itemRef }) {
+const formatCountdown = (seconds) => `${Math.floor(seconds / 60)}:${`${seconds % 60}`.padStart(2, '0')}`;
+
+function LogItem({ ex, workoutId, isDone, onDone, targetDateKey, savedEntry, forceEditMode, focusMode, itemRef }) {
   const isCardio = ex.type === 'cardio';
   const [val1, setVal1] = useState('');
   const [val2, setVal2] = useState('');
@@ -21,6 +23,7 @@ function LogItem({ ex, workoutId, isDone, onDone, targetDateKey, savedEntry, for
   const [isEditing, setIsEditing] = useState(Boolean(forceEditMode));
   const savedTimeoutRef = useRef(null);
   const reorderTimeoutRef = useRef(null);
+  const supportsBodyweight = !isCardio && /(barra fixa|flex[aã]o|prancha|abdominal|paralela)/i.test(ex.name || '');
 
   useEffect(() => {
     const normalizedSavedEntry = getNormalizedWorkoutEntry(savedEntry, ex);
@@ -106,11 +109,22 @@ function LogItem({ ex, workoutId, isDone, onDone, targetDateKey, savedEntry, for
       ? 'Km'
       : 'Reps';
   const canSave = Boolean(val1 && val2);
+  const primaryUnit = isCardio ? 'min' : 'kg';
+  const secondaryUnit = isCardio ? 'km' : 'reps';
+  const previousSummary = previousEntry
+    ? `${formatLogValue(previousEntry.primary, previousEntry.primaryUnit)} · ${formatLogValue(previousEntry.secondary, previousEntry.secondaryUnit)}`
+    : '';
+
+  const repeatPrevious = () => {
+    if (!previousEntry) return;
+    setVal1(String(previousEntry.primary));
+    setVal2(String(previousEntry.secondary));
+  };
 
   return (
     <div
       ref={itemRef}
-      className={`hc-log-item relative border-b border-light-separator py-3 last:border-0 dark:border-dark-separator ${
+      className={`hc-log-item relative border-b border-light-separator py-3 last:border-0 dark:border-dark-separator ${focusMode ? 'hc-log-item--focus' : ''} ${
         isDone && !isEditing ? 'hc-log-item-done' : ''
       }`}
     >
@@ -128,11 +142,23 @@ function LogItem({ ex, workoutId, isDone, onDone, targetDateKey, savedEntry, for
       )}
 
       <div className="mb-2 flex items-center justify-between">
-        <span className="min-w-0 flex-1 truncate pr-2 text-[0.875rem] font-semibold leading-5 text-gray-800 dark:text-gray-100">{ex.name}</span>
+        <span className={`min-w-0 flex-1 pr-2 font-semibold text-gray-800 dark:text-gray-100 ${focusMode ? 'text-[1.15rem] leading-6' : 'truncate text-[0.875rem] leading-5'}`}>{ex.name}</span>
         <span className="hc-numeric ml-2 shrink-0 rounded-md bg-light-bg px-2 py-0.5 text-[0.6875rem] font-semibold text-gray-600 dark:bg-dark-surface dark:text-gray-400">
           {isCardio ? ex.target : ex.sets}
         </span>
       </div>
+
+      {focusMode && previousEntry && !isDone && (
+        <div className="hc-last-performance">
+          <div>
+            <span>Último treino</span>
+            <strong className="hc-numeric">{previousSummary}</strong>
+          </div>
+          <button type="button" onClick={repeatPrevious}>
+            <RotateCcw size={14} aria-hidden="true" /> Repetir
+          </button>
+        </div>
+      )}
 
       {isDone && !isEditing ? (
         <div className="flex items-center justify-between gap-2 py-1 text-[0.8125rem] font-semibold text-emerald-700 dark:text-emerald-300">
@@ -152,43 +178,59 @@ function LogItem({ ex, workoutId, isDone, onDone, targetDateKey, savedEntry, for
         </div>
       ) : (
         <div className="flex items-center gap-1.5">
-          <input
-            type="number"
-            inputMode="decimal"
-            aria-label={isCardio ? `${ex.name}: minutos` : `${ex.name}: carga em kg`}
-            placeholder={primaryPlaceholder}
-            value={val1}
-            onChange={(event) => setVal1(event.target.value)}
-            className="hc-input hc-numeric h-10 min-w-0 flex-1 rounded-xl border border-[#0A3CFF]/10 bg-light-bg px-2.5 text-[0.875rem] font-semibold text-gray-900 outline-none transition placeholder:text-gray-500 focus:border-[#0A3CFF]/40 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/10 dark:bg-dark-surface dark:text-white dark:placeholder:text-gray-400"
-          />
-          <input
-            type="number"
-            inputMode="decimal"
-            aria-label={isCardio ? `${ex.name}: quilômetros` : `${ex.name}: repetições`}
-            placeholder={secondaryPlaceholder}
-            value={val2}
-            onChange={(event) => setVal2(event.target.value)}
-            className="hc-input hc-numeric h-10 min-w-0 flex-1 rounded-xl border border-[#0A3CFF]/10 bg-light-bg px-2.5 text-[0.875rem] font-semibold text-gray-900 outline-none transition placeholder:text-gray-500 focus:border-[#0A3CFF]/40 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/10 dark:bg-dark-surface dark:text-white dark:placeholder:text-gray-400"
-          />
+          <label className="hc-log-field">
+            <span className="sr-only">{isCardio ? 'Minutos' : 'Carga em kg'}</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              aria-label={isCardio ? `${ex.name}: minutos` : `${ex.name}: carga em kg`}
+              placeholder={focusMode ? '0' : primaryPlaceholder}
+              value={val1}
+              onChange={(event) => setVal1(event.target.value)}
+              className="hc-input hc-numeric min-w-0 border border-[#0A3CFF]/10 bg-light-bg text-[0.875rem] font-semibold text-gray-900 outline-none transition placeholder:text-gray-500 focus:border-[#0A3CFF]/40 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/10 dark:bg-dark-surface dark:text-white dark:placeholder:text-gray-400"
+            />
+            <b>{primaryUnit}</b>
+          </label>
+          <label className="hc-log-field">
+            <span className="sr-only">{isCardio ? 'Quilômetros' : 'Repetições'}</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              aria-label={isCardio ? `${ex.name}: quilômetros` : `${ex.name}: repetições`}
+              placeholder={focusMode ? '0' : secondaryPlaceholder}
+              value={val2}
+              onChange={(event) => setVal2(event.target.value)}
+              className="hc-input hc-numeric min-w-0 border border-[#0A3CFF]/10 bg-light-bg text-[0.875rem] font-semibold text-gray-900 outline-none transition placeholder:text-gray-500 focus:border-[#0A3CFF]/40 focus:ring-2 focus:ring-[#0A3CFF]/20 dark:border-white/10 dark:bg-dark-surface dark:text-white dark:placeholder:text-gray-400"
+            />
+            <b>{secondaryUnit}</b>
+          </label>
           <button
             onClick={handleSave}
             disabled={!canSave}
             aria-label="Salvar exercício"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0A3CFF] text-white transition hover:bg-[#0833D8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-white/10 dark:disabled:text-gray-500"
+            className="hc-log-save flex shrink-0 items-center justify-center rounded-xl bg-[#0A3CFF] text-white transition hover:bg-[#0833D8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-white/10 dark:disabled:text-gray-500"
           >
             <Check size={16} strokeWidth={3} />
           </button>
         </div>
       )}
+      {focusMode && supportsBodyweight && !isDone && (
+        <button type="button" className="hc-bodyweight-action" onClick={() => setVal1('0')}>
+          Usar peso corporal
+        </button>
+      )}
     </div>
   );
 }
 
-export default function WeightLog({ exercises = [], workoutId, targetDateKey, onProgressChange }) {
+export default function WeightLog({ exercises = [], workoutId, targetDateKey, onProgressChange, focusMode = false }) {
   const [expanded, setExpanded] = useState(false);
   const [completedExercises, setCompletedExercises] = useState({});
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewedExercises, setReviewedExercises] = useState({});
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [restSeconds, setRestSeconds] = useState(0);
+  const [isRestRunning, setIsRestRunning] = useState(false);
   const itemRefs = useRef(new Map());
   const previousRectsRef = useRef(new Map());
 
@@ -220,8 +262,9 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
   );
   const allDone = exercises.length > 0 && doneCount === exercises.length;
   const orderedExercises = useMemo(
-    () =>
-      exercises
+    () => {
+      if (focusMode) return exercises;
+      return exercises
         .map((exercise, index) => ({
           exercise,
           index,
@@ -234,10 +277,27 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
           }
           return Number(a.isDone) - Number(b.isDone) || a.index - b.index;
         })
-        .map((item) => item.exercise),
-    [allDone, completedExercises, exercises, isReviewing, reviewedExercises]
+        .map((item) => item.exercise);
+    },
+    [allDone, completedExercises, exercises, focusMode, isReviewing, reviewedExercises]
   );
-  const visible = expanded ? orderedExercises : orderedExercises.slice(0, 3);
+  const visible = focusMode
+    ? orderedExercises.slice(activeIndex, activeIndex + 1)
+    : expanded ? orderedExercises : orderedExercises.slice(0, 3);
+
+  useEffect(() => {
+    if (!isRestRunning || restSeconds <= 0) return undefined;
+    const timer = window.setInterval(() => {
+      setRestSeconds((seconds) => {
+        if (seconds <= 1) {
+          setIsRestRunning(false);
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [isRestRunning, restSeconds]);
 
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
@@ -275,10 +335,22 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
   }, [visible]);
 
   const markExerciseDone = (exerciseId, entry) => {
-    setCompletedExercises((previous) => ({
-      ...previous,
-      [exerciseId]: entry || previous[exerciseId] || true,
-    }));
+    setCompletedExercises((previous) => {
+      const next = {
+        ...previous,
+        [exerciseId]: entry || previous[exerciseId] || true,
+      };
+
+      if (focusMode) {
+        const nextPendingIndex = exercises.findIndex((exercise, index) => index > activeIndex && !next[exercise.id]);
+        const firstPendingIndex = exercises.findIndex((exercise) => !next[exercise.id]);
+        setActiveIndex(nextPendingIndex >= 0 ? nextPendingIndex : firstPendingIndex >= 0 ? firstPendingIndex : activeIndex);
+        setRestSeconds(90);
+        setIsRestRunning(true);
+      }
+
+      return next;
+    });
     if (isReviewing) {
       setReviewedExercises((previous) => ({
         ...previous,
@@ -296,6 +368,15 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
     setIsReviewing(true);
   };
 
+  const toggleRestTimer = () => {
+    if (restSeconds <= 0) {
+      setRestSeconds(90);
+      setIsRestRunning(true);
+      return;
+    }
+    setIsRestRunning((running) => !running);
+  };
+
   useEffect(() => {
     if (!allDone) {
       setIsReviewing(false);
@@ -306,6 +387,9 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
   useEffect(() => {
     setReviewedExercises({});
     previousRectsRef.current = new Map();
+    setActiveIndex(0);
+    setRestSeconds(0);
+    setIsRestRunning(false);
   }, [targetDateKey, workoutId]);
 
   if (!exercises.length) return null;
@@ -335,11 +419,12 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
   }
 
   return (
-    <div className="hc-surface hc-glass overflow-hidden rounded-[22px] border border-black/[0.05] bg-white/60 dark:border-white/[0.08] dark:bg-white/[0.055]">
+    <>
+    <div className={`hc-surface hc-glass overflow-hidden rounded-[22px] border border-black/[0.05] bg-white/60 dark:border-white/[0.08] dark:bg-white/[0.055] ${focusMode ? 'hc-weight-log--focus' : ''}`}>
       <div className="border-b border-black/[0.055] px-3.5 py-3 dark:border-white/[0.07]">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="hc-label text-gray-500 dark:text-gray-400">Preenchimento</p>
+            <p className="hc-label text-gray-500 dark:text-gray-400">{focusMode ? `Etapa ${activeIndex + 1}` : 'Preenchimento'}</p>
           </div>
           <div className="hc-numeric shrink-0 rounded-full border border-black/[0.06] bg-white px-3 py-1.5 text-[0.8125rem] font-semibold leading-none text-gray-800 dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-100">
             {doneCount}/{exercises.length}
@@ -358,6 +443,7 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
           onDone={markExerciseDone}
           targetDateKey={targetDateKey}
           forceEditMode={isReviewing}
+          focusMode={focusMode}
           itemRef={(node) => {
             if (node) {
               itemRefs.current.set(ex.id, node);
@@ -368,7 +454,7 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
         />
       ))}
 
-      {exercises.length > 3 && (
+      {!focusMode && exercises.length > 3 && (
         <button
           onClick={() => setExpanded(!expanded)}
           className="mt-1 w-full rounded-xl py-2.5 text-center text-[0.8125rem] font-semibold text-[#0A3CFF] transition hover:bg-[#0A3CFF]/5 active:opacity-70 dark:text-[#8FB1FF] dark:hover:bg-white/[0.04]"
@@ -384,5 +470,30 @@ export default function WeightLog({ exercises = [], workoutId, targetDateKey, on
       )}
       </div>
     </div>
+    {focusMode && (
+      <div className="hc-session-stepper hc-glass" aria-label="Controles do treino">
+        <button
+          type="button"
+          onClick={() => setActiveIndex((index) => Math.max(0, index - 1))}
+          disabled={activeIndex === 0}
+          aria-label="Exercício anterior"
+        >
+          <ChevronLeft size={20} aria-hidden="true" />
+        </button>
+        <button type="button" className="hc-session-stepper__timer" onClick={toggleRestTimer}>
+          {isRestRunning ? <Pause size={15} fill="currentColor" aria-hidden="true" /> : <Play size={15} fill="currentColor" aria-hidden="true" />}
+          <span>{restSeconds > 0 ? `Descanso ${formatCountdown(restSeconds)}` : 'Descanso 1:30'}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveIndex((index) => Math.min(exercises.length - 1, index + 1))}
+          disabled={activeIndex >= exercises.length - 1}
+          aria-label="Próximo exercício"
+        >
+          <ChevronRight size={20} aria-hidden="true" />
+        </button>
+      </div>
+    )}
+    </>
   );
 }

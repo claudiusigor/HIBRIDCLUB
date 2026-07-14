@@ -3,7 +3,6 @@ import {
   Sun,
   Moon,
   CircleCheckBig,
-  CircleDashed,
   Camera,
   Download,
   LogOut,
@@ -17,6 +16,9 @@ import {
   Trophy,
   Flame,
   Sparkles,
+  Pause,
+  Play,
+  X,
 } from 'lucide-react';
 import { workoutPlan } from '../data/workoutPlan';
 import { DEFAULT_WEEK_ORDER, getWeekdayKeyFromDate, normalizePlanModel } from '../services/plans';
@@ -184,12 +186,16 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
   const [isProfileAvatarUploading, setIsProfileAvatarUploading] = useState(false);
   const [profileAvatarMessage, setProfileAvatarMessage] = useState('');
   const [profileAvatarVersion, setProfileAvatarVersion] = useState(0);
+  const [isWorkoutMode, setIsWorkoutMode] = useState(false);
+  const [isSessionPaused, setIsSessionPaused] = useState(false);
+  const [sessionSeconds, setSessionSeconds] = useState(0);
   const profilePhotoInputRef = useRef(null);
   const profilePullStartRef = useRef(null);
   const profilePullValueRef = useRef(0);
   const profilePullPointerIdRef = useRef(null);
   const profilePullMovedRef = useRef(false);
   const profilePullIgnoreClickRef = useRef(false);
+  const preserveSelectedWeekdayRef = useRef(false);
   const weekOrder = currentPlan.weekOrder || DEFAULT_WEEK_ORDER;
   const weekDateByWeekday = getCurrentWeekDateKeysByWeekday();
 
@@ -208,8 +214,24 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
 
   useEffect(() => {
     if (activeTab !== TABS.HOME) return;
+    if (preserveSelectedWeekdayRef.current) {
+      preserveSelectedWeekdayRef.current = false;
+      return;
+    }
     setSelectedWeekday(getWeekdayKeyFromDate());
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!isWorkoutMode || isSessionPaused) return undefined;
+    const timer = window.setInterval(() => setSessionSeconds((seconds) => seconds + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [isSessionPaused, isWorkoutMode]);
+
+  useEffect(() => {
+    setIsWorkoutMode(false);
+    setIsSessionPaused(false);
+    setSessionSeconds(0);
+  }, [selectedWeekday]);
 
   useEffect(() => {
     const syncTodayOnHome = () => {
@@ -474,7 +496,18 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
   });
 
   const currentTabContent = useMemo(() => {
-    if (activeTab === TABS.STATS) return <StatsPage plan={currentPlan} />;
+    if (activeTab === TABS.STATS) {
+      return (
+        <StatsPage
+          plan={currentPlan}
+          onOpenWorkout={(weekdayKey) => {
+            preserveSelectedWeekdayRef.current = true;
+            setSelectedWeekday(weekdayKey);
+            setActiveTab(TABS.HOME);
+          }}
+        />
+      );
+    }
     if (activeTab === TABS.NUTRITION) return <NutritionPage plan={currentPlan} />;
     if (activeTab === TABS.HISTORY) return <HistoryPage plan={currentPlan} />;
     if (activeTab === TABS.PLAN) {
@@ -487,7 +520,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
   return (
     <div className="hc-app-shell min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white">
       <header
-        className={`hc-topbar sticky top-0 z-40 pb-4 pt-4 ${activeTab === TABS.HOME ? '' : 'hc-topbar--condensed'} ${isProfileExpanded ? 'hc-topbar--profile-open' : ''}`}
+        className={`hc-topbar sticky top-0 z-40 pb-4 pt-4 ${activeTab === TABS.HOME && !isWorkoutMode ? '' : 'hc-topbar--condensed'} ${isWorkoutMode ? 'hc-topbar--workout' : ''} ${isProfileExpanded ? 'hc-topbar--profile-open' : ''}`}
         style={profilePanelStyle}
       >
         <div className="mx-auto w-full max-w-[430px] px-5">
@@ -603,7 +636,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
           <span />
         </button>
 
-        <div className="hc-topbar-collapsible" aria-hidden={activeTab !== TABS.HOME}>
+        <div className="hc-topbar-collapsible" aria-hidden={activeTab !== TABS.HOME || isWorkoutMode}>
           <div className="hc-topbar-collapsible-inner">
           <div className="hc-topbar-collapsible-content">
             <div className="mb-2 flex items-center justify-between px-1">
@@ -707,16 +740,29 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
             selectedWeekday={selectedWeekday}
             selectedDateKey={weekDateByWeekday[selectedWeekday]}
             todayWeekdayKey={todayWeekdayKey}
-            selectedWeekdayCompleted={Boolean(completedWeekdays[selectedWeekday])}
             selectedWeekdayProgress={weeklyProgress[selectedWeekday] || { hasAnySession: false, loggedExercises: 0 }}
             onProgressChange={() => setProgressVersion((v) => v + 1)}
+            isWorkoutMode={isWorkoutMode}
+            isSessionPaused={isSessionPaused}
+            sessionSeconds={sessionSeconds}
+            onStartWorkout={() => {
+              setIsWorkoutMode(true);
+              setIsSessionPaused(false);
+              setSessionSeconds(0);
+              setIsProfileExpanded(false);
+            }}
+            onToggleSessionPause={() => setIsSessionPaused((paused) => !paused)}
+            onEndWorkout={() => {
+              setIsWorkoutMode(false);
+              setIsSessionPaused(false);
+            }}
           />
         )}
 
         {activeTab !== TABS.HOME && <Suspense fallback={<PageFallback label="Carregando tela" />}>{currentTabContent}</Suspense>}
       </main>
 
-      <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2 px-1">
+      {!isWorkoutMode && <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2 px-1">
         <nav className="hc-dock rounded-[24px] border border-black/[0.04] px-3 py-2 dark:border-white/[0.08]">
           <div className="grid grid-cols-6 gap-1">
             {DOCK_ITEMS.map((item) => {
@@ -738,7 +784,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
             })}
           </div>
         </nav>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -751,74 +797,20 @@ function PageFallback({ label }) {
   );
 }
 
-function getDayStatus({
-  activeWorkout,
-  isTodaySelected,
-  selectedWeekdayCompleted,
-  loggedExercises,
-  targetExercises,
-}) {
-  if (!activeWorkout) {
-    return {
-      title: 'Dia de descanso',
-      description: 'Recupere, hidrate e prepare o próximo bloco da semana.',
-      icon: BedDouble,
-      tone: 'rest',
-    };
-  }
+const formatSessionTime = (seconds) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = `${seconds % 60}`.padStart(2, '0');
+  return `${minutes}:${remainder}`;
+};
 
-  if (isTodaySelected) {
-    if (targetExercises > 0 && loggedExercises >= targetExercises) {
-      return {
-        title: 'Treino concluído',
-        description: 'Sessão finalizada hoje. Ótimo trabalho.',
-        icon: CircleCheckBig,
-        tone: 'done',
-      };
-    }
-
-    if (loggedExercises > 0) {
-      return {
-        title: 'Em andamento',
-        description: `${loggedExercises} item${loggedExercises === 1 ? '' : 's'} registrado${loggedExercises === 1 ? '' : 's'} hoje.`,
-        icon: CircleDashed,
-        tone: 'progress',
-      };
-    }
-
-    return {
-      title: 'Ainda não iniciado',
-      description: 'Preencha os itens abaixo como checklist do treino.',
-      icon: CircleDashed,
-      tone: 'idle',
-    };
-  }
-
-  if (targetExercises > 0 && loggedExercises >= targetExercises) {
-    return {
-      title: 'Treino concluído',
-      description: 'Você já registrou essa sessão no histórico semanal.',
-      icon: CircleCheckBig,
-      tone: 'done',
-    };
-  }
-
-  if (selectedWeekdayCompleted) {
-    return {
-      title: 'Em andamento',
-      description: 'Sessão parcialmente registrada neste dia.',
-      icon: CircleDashed,
-      tone: 'progress',
-    };
-  }
-
-  return {
-    title: 'Treino planejado',
-    description: 'Esse dia está pronto para quando você quiser executar.',
-    icon: CircleDashed,
-    tone: 'idle',
-  };
-}
+const formatPlanDate = (dateKey, isToday) => {
+  const formatted = new Date(`${dateKey}T12:00:00`).toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'short',
+  });
+  return `${isToday ? 'Hoje · ' : ''}${formatted}`;
+};
 
 function HomeContent({
   activeWorkout,
@@ -828,44 +820,66 @@ function HomeContent({
   selectedWeekday,
   selectedDateKey,
   todayWeekdayKey,
-  selectedWeekdayCompleted,
   selectedWeekdayProgress,
   onProgressChange,
+  isWorkoutMode,
+  isSessionPaused,
+  sessionSeconds,
+  onStartWorkout,
+  onToggleSessionPause,
+  onEndWorkout,
 }) {
   const isTodaySelected = selectedWeekday === todayWeekdayKey;
   const targetExercises = activeWorkout?.exercises?.length || 0;
   const loggedExercises = selectedWeekdayProgress?.loggedExercises || 0;
-  const dayStatus = getDayStatus({
-    activeWorkout,
-    isTodaySelected,
-    selectedWeekdayCompleted,
-    loggedExercises,
-    targetExercises,
-  });
-  const DayStatusIcon = dayStatus.icon;
-  const dayStatusToneClass =
-    dayStatus.tone === 'done'
-      ? 'bg-emerald-500/14 text-emerald-600 dark:bg-[#FE0972]/18 dark:text-[#FF7DB3]'
-      : dayStatus.tone === 'progress'
-        ? 'bg-[#0A3CFF]/12 text-[#0A3CFF] dark:bg-[#0A3CFF]/22 dark:text-[#AFC5FF]'
-        : 'bg-gray-500/14 text-gray-600 dark:bg-white/[0.1] dark:text-gray-300';
+  const progressPercent = targetExercises > 0
+    ? Math.min(100, Math.round((loggedExercises / targetExercises) * 100))
+    : 0;
 
   return (
-    <div className="space-y-4">
-      <section>
-        <div className="mb-3">
-          <p className="hc-label text-[#0A3CFF] dark:text-[#8FB1FF]">Plano do dia</p>
-        </div>
+    <div className={`space-y-4 ${isWorkoutMode ? 'hc-home-session' : ''}`}>
+      {isWorkoutMode && activeWorkout ? (
+        <section className="hc-session-header hc-glass" aria-label="Sessão em andamento">
+          <div className="hc-session-header__topline">
+            <span className="hc-session-header__id">Treino {activeWorkout.id}</span>
+            <strong className="hc-numeric">{formatSessionTime(sessionSeconds)}</strong>
+            <button
+              type="button"
+              onClick={onToggleSessionPause}
+              aria-label={isSessionPaused ? 'Continuar cronômetro' : 'Pausar cronômetro'}
+            >
+              {isSessionPaused ? <Play size={16} fill="currentColor" /> : <Pause size={16} fill="currentColor" />}
+            </button>
+          </div>
+          <div className="hc-session-header__body">
+            <div>
+              <p>{formatPlanDate(selectedDateKey, isTodaySelected)}</p>
+              <h2>{activeWorkout.name}</h2>
+            </div>
+            <span className="hc-numeric">{loggedExercises}/{targetExercises}</span>
+          </div>
+          <div className="hc-session-header__progress" aria-label={`${progressPercent}% do treino concluído`}>
+            <span style={{ width: `${progressPercent}%` }} />
+          </div>
+          <button type="button" className="hc-session-header__exit" onClick={onEndWorkout}>
+            <X size={15} aria-hidden="true" /> Encerrar sessão
+          </button>
+        </section>
+      ) : (
+        <section>
+          <div className="mb-3 flex items-center justify-between gap-3 px-0.5">
+            <p className="hc-label text-[#0A3CFF] dark:text-[#8FB1FF]">{formatPlanDate(selectedDateKey, isTodaySelected)}</p>
+            <span className="hc-numeric text-[0.6875rem] font-semibold text-gray-500 dark:text-gray-400">
+              {loggedExercises}/{targetExercises}
+            </span>
+          </div>
         {activeWorkout ? (
           <TrainingCard
             workout={activeWorkout}
-            StatusIcon={DayStatusIcon}
-            statusTitle={dayStatus.title}
-            statusDescription={dayStatus.description}
-            statusToneClass={dayStatusToneClass}
             objectiveText={OBJECTIVE_COPY[selectedWorkoutId] || 'Mantenha consistência e boa execução em cada série.'}
             loggedExercises={loggedExercises}
             targetExercises={targetExercises}
+            onStartWorkout={onStartWorkout}
           />
         ) : (
           <div className="hc-surface rounded-[22px] border border-black/[0.05] bg-white px-5 py-6 text-center dark:border-white/[0.08] dark:bg-white/[0.05]">
@@ -878,12 +892,15 @@ function HomeContent({
             </p>
           </div>
         )}
-      </section>
+        </section>
+      )}
 
       <section>
-        <div className="mb-3 flex items-end justify-between">
+        <div className={`${isWorkoutMode ? 'mb-2' : 'mb-3'} flex items-end justify-between`}>
           <div>
-            <h3 className="hc-heading text-[1.125rem] leading-tight tracking-[-0.02em] text-gray-950 dark:text-white">Checklist do treino</h3>
+            <h3 className="hc-heading text-[1.125rem] leading-tight tracking-[-0.02em] text-gray-950 dark:text-white">
+              {isWorkoutMode ? 'Exercício atual' : 'Checklist do treino'}
+            </h3>
           </div>
         </div>
         {activeWorkout ? (
@@ -892,6 +909,7 @@ function HomeContent({
             workoutId={selectedWorkoutId || 'REST'}
             targetDateKey={selectedDateKey}
             onProgressChange={onProgressChange}
+            focusMode={isWorkoutMode}
           />
         ) : (
           <div className="hc-surface rounded-[20px] border border-black/[0.05] bg-white px-4 py-5 text-center text-[0.875rem] text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-gray-400">

@@ -12,8 +12,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Hyperactive Fit',
-        short_name: 'Hyperactive',
+        name: 'Hybrid Club',
+        short_name: 'Hybrid Club',
         description: 'Aplicativo de monitoramento híbrido',
         start_url: basePath,
         scope: basePath,

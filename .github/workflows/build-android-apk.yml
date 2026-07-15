@@ -85,7 +85,6 @@ jobs:
         run: |
           mkdir -p android-release
           cp android/app/build/outputs/apk/release/app-release.apk "android-release/hibrid-club-${ANDROID_VERSION_NAME}-${ANDROID_VERSION_CODE}.apk"
-          cp android/app/build/outputs/apk/release/app-release.apk "android-release/hibrid-club-latest.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -102,3 +101,38 @@ jobs:
           name: Hibrid Club Android v${{ env.ANDROID_VERSION_NAME }}
           files: android-release/*.apk
           make_latest: true
+
+      - name: Update versioned APK link in README
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          RELEASE_VERSION: ${{ env.ANDROID_VERSION_NAME }}
+          RELEASE_CODE: ${{ env.ANDROID_VERSION_CODE }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ['RELEASE_VERSION']
+          code = os.environ['RELEASE_CODE']
+          repository = os.environ['GITHUB_REPOSITORY']
+          apk_url = f"https://github.com/{repository}/releases/download/android-v{version}/hibrid-club-{version}-{code}.apk"
+          readme_path = Path('README.md')
+          readme = readme_path.read_text(encoding='utf-8')
+          pattern = r"https://github\.com/[^/]+/[^/]+/releases/download/android-v\d+\.\d+\.\d+/hibrid-club-\d+\.\d+\.\d+-\d+\.apk"
+          updated, replacements = re.subn(pattern, apk_url, readme)
+          if replacements == 0:
+              raise SystemExit('No versioned APK link was found in README.md')
+          updated = re.sub(r"Baixar o APK \d+\.\d+\.\d+", f"Baixar o APK {version}", updated)
+          readme_path.write_text(updated, encoding='utf-8')
+          PY
+
+          if git diff --quiet -- README.md; then
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: update APK link to ${ANDROID_VERSION_NAME} [skip ci]"
+          git push origin HEAD:main

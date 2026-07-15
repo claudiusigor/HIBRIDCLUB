@@ -2,101 +2,85 @@
 
 # Hibrid Club
 
-App mobile para atletas hibridos acompanharem treino, cardio, consistencia, hidratacao, perfil e ranking mensal.
+App mobile para atletas hibridos organizarem treino, corrida, hidratacao, historico e evolucao em uma Arena mensal.
 
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=111)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=fff)](https://vitejs.dev/)
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-3FCF8E?logo=supabase&logoColor=111)](https://supabase.com/)
 [![Android](https://img.shields.io/badge/Android-APK-3DDC84?logo=android&logoColor=111)](https://github.com/claudiusigor/HIBRIDCLUB/releases/latest)
 
-<br />
-
-<a href="https://github.com/claudiusigor/HIBRIDCLUB/releases/latest/download/hibrid-club-latest.apk">
-  <strong>Baixar APK mais recente</strong>
-</a>
-
-<br />
-<br />
+[Abrir aplicacao](https://claudiusigor.github.io/HIBRIDCLUB/) | [Baixar APK](https://github.com/claudiusigor/HIBRIDCLUB/releases/latest/download/hibrid-club-latest.apk) | [Ver releases](https://github.com/claudiusigor/HIBRIDCLUB/releases/latest)
 
 ![Hibrid Club](public/HYBRIDCLUBBANNER.png)
 
 </div>
 
-## Sobre o projeto
+## Visao geral
 
-O app nasceu para transformar um plano de treino hibrido em uma rotina diaria clara. A ideia e simples: abrir o celular, ver o treino do dia, registrar a execucao e acompanhar a evolucao sem friccao.
+O Hibrid Club transforma um plano de treino hibrido em uma rotina diaria clara. O atleta abre o app, identifica a ficha do dia, registra a execucao e acompanha consistencia, cardio, hidratacao e progresso sem interromper o treino.
 
-Ele combina uma interface web moderna com empacotamento Android via Capacitor, permitindo uso como PWA no navegador e como APK instalado no celular.
+O mesmo projeto funciona como PWA e como aplicativo Android empacotado com Capacitor. Autenticacao, perfis, planos, registros diarios, fotos e Ranking sao integrados ao Supabase.
 
-## Principais recursos
+## Experiencia atual
 
-- Plano diario de treino com foco em execucao rapida.
-- Registro de treinos, cardio, historico e hidratacao.
-- Perfil do atleta com foto, sequencia, dias no mes e pontos mensais.
-- Ranking mensal com pontuacao, podium e fotos de perfil sincronizadas.
-- Tema claro/escuro com visual premium e responsivo.
-- Backend Supabase para autenticacao, perfis, storage e dados do app.
-- APK Android gerado por GitHub Actions com versionamento automatico.
+- **Inicio:** semana de treino, ficha do dia, progresso dos exercicios e modo de execucao.
+- **Cardio:** indicadores de corrida e acesso direto aos treinos relacionados.
+- **Agua:** controle diario de hidratacao e nutricao.
+- **Historico:** calendario mensal, sequencia, variedade de fichas, pontos e impacto no Ranking.
+- **Plano:** visualizacao e edicao do plano pessoal.
+- **Ranking:** temporada mensal, divisao, proximo adversario, podio 3D e conquistas.
+- **Perfil:** nome, bio, foco, objetivo principal, foto e moldura personalizada.
 
-## Download do APK
+### Perfil e avatar
 
-O APK oficial fica nas releases do repositorio:
+- Upload de JPG, PNG ou WEBP de ate 5 MB.
+- Editor de recorte com arraste, zoom, rotacao e previa.
+- Exportacao quadrada otimizada antes do upload.
+- Bio e objetivo visiveis no perfil publico da Arena.
+- Molduras Minimal, Azul e Glass disponiveis para todos.
+- Molduras especiais desbloqueadas por conquistas do Ranking.
 
-[Download direto do APK](https://github.com/claudiusigor/HIBRIDCLUB/releases/latest/download/hibrid-club-latest.apk)
+### Arena e recompensas
 
-Pagina de releases:
+A pontuacao mensal segue o mesmo contrato no cliente e no Supabase:
 
-[github.com/claudiusigor/HIBRIDCLUB/releases/latest](https://github.com/claudiusigor/HIBRIDCLUB/releases/latest)
+| Acao | Pontos |
+| --- | ---: |
+| Dia com treino registrado | +100 |
+| Dia de sequencia ativa | +25 |
+| Variedade de ficha no mes | +10 |
 
-Para atualizar no celular sem desinstalar, instale sempre o APK release assinado gerado pelo GitHub. O Android aceita a atualizacao quando o app mantem o mesmo `applicationId`, a mesma assinatura e um `versionCode` maior.
+Conquistas de consistencia, variedade, sequencia e colocacao liberam molduras exclusivas. Premios de Top 10, podio e campeao so sao consolidados quando a temporada e finalizada.
 
 ## Stack
 
-- React 18
-- Vite
-- Tailwind CSS
-- Supabase
-- Capacitor Android
-- GitHub Actions
+- React 18 e Vite 5
+- Tailwind CSS e Plus Jakarta Sans
+- Supabase Auth, Database e Storage
+- Three.js e OGL para experiencias visuais 3D
+- React Easy Crop para edicao de avatar
+- Capacitor 8 para Android
+- Node Test Runner
+- GitHub Actions e GitHub Pages
 
-## Como rodar localmente
+## Requisitos
+
+- Node.js 22
+- npm
+- Java 21 para builds Android locais
+- Android SDK 36 e Build Tools 36.0.0
+- Android Studio para executar ou depurar o projeto nativo
+- Projeto Supabase configurado
+
+## Configuracao local
 
 ```powershell
+git clone https://github.com/claudiusigor/HIBRIDCLUB.git
+cd HIBRIDCLUB
 npm install
-npm run dev
 ```
 
-O app abre por padrao em:
-
-```text
-http://127.0.0.1:5173/
-```
-
-## Build web
-
-```powershell
-npm run build
-```
-
-## Build Android
-
-Sincronizar o projeto Android com a ultima versao web:
-
-```powershell
-npm run android:sync
-```
-
-Gerar APK debug local:
-
-```powershell
-npm run android:debug
-```
-
-O fluxo oficial de APK release esta documentado em [ANDROID.md](ANDROID.md).
-
-## Variaveis de ambiente
-
-Crie um arquivo `.env.local` com as chaves do Supabase:
+Crie `.env.local`:
 
 ```text
 VITE_SUPABASE_URL=
@@ -104,31 +88,97 @@ VITE_SUPABASE_ANON_KEY=
 VITE_OWNER_EMAIL=
 ```
 
-## Supabase
+Inicie o servidor:
 
-O projeto usa Supabase para:
-
-- autenticacao de usuarios;
-- tabela de perfis;
-- storage de fotos de perfil;
-- logs diarios de treino;
-- ranking mensal calculado por funcao SQL.
-
-As migrations ficam em:
-
-```text
-supabase/migrations
+```powershell
+npm run dev
 ```
 
-## Automacao do APK
+O Vite informa no terminal a porta disponivel, normalmente `http://127.0.0.1:5173/`.
 
-O workflow `Build Android APK` roda na branch `main` e tambem pode ser executado manualmente em `Actions`.
+## Supabase
 
-Quando executado manualmente, ele cria uma release com:
+As migrations versionadas ficam em `supabase/migrations` e devem ser aplicadas em ordem cronologica. Elas cobrem:
 
-- APK versionado, por exemplo `hibrid-club-1.0.25-25.apk`;
-- APK com nome fixo `hibrid-club-latest.apk`, usado pelo link direto do README.
+- autenticacao, perfis e planos;
+- logs diarios de treino e nutricao;
+- storage de avatares;
+- pontuacao e temporadas do Ranking;
+- conquistas publicas e trofeus sazonais;
+- personalizacao do perfil e molduras;
+- vitrine publica da Arena e reconciliacao de premios.
+
+Os arquivos `supabase/setup_*.sql` agrupam configuracoes para instalacao ou manutencao manual. Revise o SQL antes de executar em um projeto com dados de producao.
+
+## Scripts
+
+| Comando | Funcao |
+| --- | --- |
+| `npm run dev` | Inicia o ambiente local com Vite |
+| `npm test` | Executa todos os testes |
+| `npm run test:ranking` | Valida pontuacao, conquistas e contrato SQL |
+| `npm run test:profile` | Valida perfil, avatar e personalizacoes |
+| `npm run build` | Gera o bundle web de producao |
+| `npm run build:android` | Gera assets web com caminhos relativos |
+| `npm run android:sync` | Compila e sincroniza os assets com o Android |
+| `npm run android:debug` | Gera o APK debug local |
+| `npm run android:open` | Sincroniza e abre o Android Studio |
+
+## Android
+
+Para gerar um APK debug local:
+
+```powershell
+npm run android:debug
+```
+
+Saida:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+O build local requer Java 21. O APK oficial deve ser o release assinado pelo GitHub Actions, pois ele preserva a assinatura e permite atualizar o app instalado sem desinstalacao.
+
+O identificador Android permanece:
+
+```text
+com.hibridclub.app
+```
+
+Veja os detalhes de assinatura e configuracao em [ANDROID.md](ANDROID.md).
+
+## CI/CD
+
+### GitHub Pages
+
+Todo push em `main` executa `.github/workflows/deploy-pages.yml`, roda a validacao do Ranking, gera o bundle e publica:
+
+[https://claudiusigor.github.io/HIBRIDCLUB/](https://claudiusigor.github.io/HIBRIDCLUB/)
+
+### APK Android
+
+Todo push em `main` executa `.github/workflows/build-android-apk.yml` e armazena o APK release assinado como artefato. Uma execucao manual por `workflow_dispatch` tambem cria uma GitHub Release contendo:
+
+- `hibrid-club-<versao>-<codigo>.apk`;
+- `hibrid-club-latest.apk` para o link permanente de download.
+
+[Baixar APK mais recente](https://github.com/claudiusigor/HIBRIDCLUB/releases/latest/download/hibrid-club-latest.apk)
+
+## Estrutura principal
+
+```text
+src/components/          shell, autenticacao, paginas e componentes visuais
+src/components/profile/  avatar, molduras e editor de foto
+src/components/ranking/  podio, medalhas e trofeus 3D
+src/domain/              regras de perfil e Ranking
+src/services/            Supabase, storage, planos e integracoes nativas
+src/utils/               processamento de imagem e utilitarios
+supabase/migrations/     evolucao versionada do banco
+tests/                   testes de Dashboard, Perfil e Ranking
+android/                 projeto nativo Capacitor
+```
 
 ## Status
 
-Projeto em evolucao continua, com foco em experiencia mobile, consistencia de treino e ranking social entre atletas.
+Projeto em evolucao continua, com prioridade para experiencia mobile, execucao rapida do treino, consistencia de dados e recompensas sociais sem perder a identidade clean e premium.

@@ -17,6 +17,17 @@ export const FINAL_PLACEMENT_BADGES = Object.freeze(['top_10', 'podium', 'champi
 
 const nonNegativeInteger = (value) => Math.max(0, Math.trunc(Number(value) || 0));
 
+export function normalizeRankingProfile(profile = {}) {
+  const bio = String(profile.bio || '').trim().slice(0, 120);
+  const primaryGoal = PRIMARY_GOAL_VALUES.includes(profile.primary_goal) ? profile.primary_goal : null;
+  const avatarFrame = AVATAR_FRAME_VALUES.includes(profile.avatar_frame) ? profile.avatar_frame : 'minimal';
+  return {
+    bio,
+    primary_goal: primaryGoal,
+    avatar_frame: avatarFrame,
+  };
+}
+
 export function getWorkoutVariety(entry) {
   if (entry?.workout_variety != null) return nonNegativeInteger(entry.workout_variety);
   return nonNegativeInteger(entry?.month_days) > 0 ? 1 : 0;
@@ -76,13 +87,18 @@ export function getPointsToAdvance(viewer, athleteAhead) {
   return Math.max(1, calculateRankPoints(athleteAhead) - calculateRankPoints(viewer) + 1);
 }
 
-export function normalizeRanking(data = [], userId, viewerAvatarUrl = '') {
+export function normalizeRanking(data = [], userId, viewerAvatarUrl = '', viewerProfile = {}) {
   const total = data.length;
   return data.map((raw, index) => {
     const rank = nonNegativeInteger(raw.rank) || index + 1;
     const isViewer = Boolean(raw.is_viewer || raw.user_id === userId);
+    const publicProfile = normalizeRankingProfile({
+      ...raw,
+      ...(isViewer ? viewerProfile : {}),
+    });
     return {
       ...raw,
+      ...publicProfile,
       rank,
       is_viewer: isViewer,
       month_days: nonNegativeInteger(raw.month_days),
@@ -97,3 +113,4 @@ export function normalizeRanking(data = [], userId, viewerAvatarUrl = '') {
     };
   });
 }
+import { AVATAR_FRAME_VALUES, PRIMARY_GOAL_VALUES } from './profile.js';

@@ -24,6 +24,7 @@ import {
   isProfileSetupComplete,
 } from '../../services/profile';
 import { setStorageScope } from '../../services/storage';
+import { syncSystemBarsTheme } from '../../services/systemBars';
 
 const ONBOARDING_STORAGE_KEY = 'hyperactive-onboarding-seen';
 const PLAN_PREPARE_TIMEOUT_MS = 12000;
@@ -125,7 +126,6 @@ export default function AuthGate() {
   const [userProfile, setUserProfile] = useState(null);
   const [authMessage, setAuthMessage] = useState('');
   const [isAuthBusy, setIsAuthBusy] = useState(false);
-  const [profileSetupMode, setProfileSetupMode] = useState('required');
   const [prepareRetryNonce, setPrepareRetryNonce] = useState(0);
   const [planTemplates, setPlanTemplates] = useState([]);
   const [selectedTemplateSlug, setSelectedTemplateSlug] = useState('hibrid-club-basic');
@@ -146,6 +146,7 @@ export default function AuthGate() {
     if (themeColorMeta) {
       themeColorMeta.setAttribute('content', isDark ? DARK_THEME_COLOR : LIGHT_THEME_COLOR);
     }
+    void syncSystemBarsTheme(isDark);
   }, [isDark]);
 
   useEffect(() => {
@@ -278,7 +279,6 @@ export default function AuthGate() {
         return;
       }
 
-      setProfileSetupMode('required');
       setStage(STAGES.NEEDS_PROFILE_SETUP);
     };
 
@@ -326,7 +326,6 @@ export default function AuthGate() {
             setStage(STAGES.PLAN_SETUP);
           }
         } else {
-          setProfileSetupMode('required');
           setStage(STAGES.NEEDS_PROFILE_SETUP);
         }
       } else {
@@ -509,7 +508,6 @@ export default function AuthGate() {
       const updatedProfile = await completeUserProfile(session.user.id, displayName);
       setUserProfile(updatedProfile);
       writeSessionCache(PROFILE_CACHE_PREFIX, session.user.id, updatedProfile);
-      setProfileSetupMode('required');
       setStage(activePlan ? STAGES.APP : STAGES.PLAN_SETUP);
     } catch (error) {
       setAuthMessage(error.message || 'Não foi possível salvar seu nome agora.');
@@ -520,10 +518,6 @@ export default function AuthGate() {
 
   const handleBackFromProfileSetup = () => {
     setAuthMessage('');
-    if (profileSetupMode === 'edit' && activePlan) {
-      setStage(STAGES.APP);
-      return;
-    }
     if (session?.user) {
       setStage(activePlan ? STAGES.APP : STAGES.PLAN_SETUP);
       return;
@@ -737,10 +731,6 @@ export default function AuthGate() {
         plan={activePlan}
         user={session.user}
         userProfile={userProfile}
-        onEditProfile={() => {
-          setProfileSetupMode('edit');
-          setStage(STAGES.NEEDS_PROFILE_SETUP);
-        }}
         onProfileUpdated={(updatedProfile) => {
           if (!updatedProfile || !session?.user?.id) return;
           setUserProfile(updatedProfile);

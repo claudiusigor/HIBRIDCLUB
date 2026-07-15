@@ -22,7 +22,14 @@ as $$
       season.season_start
     from public.ranking_season_results result
     join public.ranking_seasons season on season.id = result.season_id
-    cross join lateral unnest(result.badges) as earned(badge_key)
+    cross join lateral unnest(array_remove(array[
+      case when result.month_days >= 10 then 'consistency_10' end,
+      case when result.streak >= 7 then 'streak_7' end,
+      case when result.workout_variety >= 4 then 'hybrid_complete' end,
+      case when result.final_rank between 1 and 10 then 'top_10' end,
+      case when result.final_rank between 1 and 3 then 'podium' end,
+      case when result.final_rank = 1 then 'champion' end
+    ]::text[], null)) as earned(badge_key)
     where result.user_id = p_user_id
       and auth.uid() is not null
   ),

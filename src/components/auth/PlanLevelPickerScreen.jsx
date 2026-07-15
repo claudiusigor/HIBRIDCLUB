@@ -13,7 +13,7 @@ export default function PlanLevelPickerScreen({
   onToggleTheme,
 }) {
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-[#F5F7FB] px-6 pb-10 pt-8 text-gray-900 dark:bg-[#0A0D14] dark:text-white">
+    <div className="hc-auth-safe-screen relative min-h-[100dvh] overflow-hidden bg-[#F5F7FB] px-6 pb-10 pt-8 text-gray-900 dark:bg-[#0A0D14] dark:text-white">
       <div className="absolute inset-0">
         <Iridescence color={[0.1, 0.4, 1]} mouseReact amplitude={0.08} speed={0.9} className="h-full w-full" />
       </div>
@@ -21,7 +21,7 @@ export default function PlanLevelPickerScreen({
       <button
         onClick={onToggleTheme}
         aria-label={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
-        className="absolute right-6 top-8 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-colors dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
+        className="hc-auth-safe-top-action absolute right-6 top-8 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-colors dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
       >
         {isDark ? <Sun size={17} /> : <Moon size={17} />}
       </button>

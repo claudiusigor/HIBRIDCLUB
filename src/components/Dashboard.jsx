@@ -1,12 +1,8 @@
-import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Sun,
   Moon,
-  CircleCheckBig,
-  Camera,
   Download,
-  LogOut,
-  User,
   House,
   Footprints,
   Droplets,
@@ -14,29 +10,30 @@ import {
   ClipboardList,
   BedDouble,
   Trophy,
-  Flame,
-  Sparkles,
   Pause,
   Play,
   X,
 } from 'lucide-react';
 import { workoutPlan } from '../data/workoutPlan';
 import { DEFAULT_WEEK_ORDER, getWeekdayKeyFromDate, normalizePlanModel } from '../services/plans';
-import { uploadProfileAvatar } from '../services/profile';
+import { getCurrentBadges } from '../domain/ranking';
 import { getLastStorageError, getWorkoutHistory, getWorkoutSessions, hasWorkoutSessions } from '../services/storage';
+import { syncSystemBarsTheme } from '../services/systemBars';
 import TrainingCard from './ui/TrainingCard';
 import WeightLog from './ui/WeightLog';
+import ProfileAvatar from './profile/ProfileAvatar';
 
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const NutritionPage = lazy(() => import('./pages/NutritionPage'));
 const PlanPage = lazy(() => import('./pages/PlanPage'));
 const RankingPage = lazy(() => import('./pages/RankingPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const THEME_STORAGE_KEY = 'hyperactive-theme';
 const DARK_THEME_COLOR = '#0A0D14';
 const LIGHT_THEME_COLOR = '#F5F7FB';
 
-const TABS = { HOME: 'home', STATS: 'stats', NUTRITION: 'nutrition', HISTORY: 'history', PLAN: 'plan', RANKING: 'ranking' };
+const TABS = { HOME: 'home', STATS: 'stats', NUTRITION: 'nutrition', HISTORY: 'history', PLAN: 'plan', RANKING: 'ranking', PROFILE: 'profile' };
 const WEEKDAY_VIEW = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
 const WEEKDAY_LABELS = {
   SEG: 'SEG',
@@ -152,21 +149,19 @@ function getTrainingProfileStats(history = {}) {
     cursor.setDate(cursor.getDate() - 1);
   }
 
+  const workoutVariety = monthWorkoutIds.size;
+  const rankingEntry = { month_days: monthDays, streak, workout_variety: workoutVariety };
+
   return {
     monthDays,
     streak,
-    points: monthDays * 100 + streak * 25 + monthWorkoutIds.size * 10,
+    workoutVariety,
+    points: monthDays * 100 + streak * 25 + workoutVariety * 10,
+    badges: getCurrentBadges(rankingEntry),
   };
 }
 
-function getInitials(name) {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return 'AT';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-}
-
-export default function Dashboard({ plan = workoutPlan, user, userProfile, onEditProfile, onProfileUpdated, onSignOut }) {
+export default function Dashboard({ plan = workoutPlan, user, userProfile, onProfileUpdated, onSignOut }) {
   const [currentPlan, setCurrentPlan] = useState(() => normalizePlanModel(plan));
   const [activeTab, setActiveTab] = useState(TABS.HOME);
   const [selectedWeekday, setSelectedWeekday] = useState(() => {
@@ -179,23 +174,18 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
   const [completedWeekdays, setCompletedWeekdays] = useState({});
   const [weeklyProgress, setWeeklyProgress] = useState({});
   const [progressVersion, setProgressVersion] = useState(0);
-  const [profileStats, setProfileStats] = useState({ monthDays: 0, streak: 0, points: 0 });
-  const [isProfileExpanded, setIsProfileExpanded] = useState(false);
-  const [profilePullProgress, setProfilePullProgress] = useState(0);
+  const [profileStats, setProfileStats] = useState({ monthDays: 0, streak: 0, workoutVariety: 0, points: 0, badges: [] });
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
-  const [isProfileAvatarUploading, setIsProfileAvatarUploading] = useState(false);
-  const [profileAvatarMessage, setProfileAvatarMessage] = useState('');
   const [profileAvatarVersion, setProfileAvatarVersion] = useState(0);
   const [isWorkoutMode, setIsWorkoutMode] = useState(false);
   const [isSessionPaused, setIsSessionPaused] = useState(false);
   const [sessionSeconds, setSessionSeconds] = useState(0);
-  const profilePhotoInputRef = useRef(null);
-  const profilePullStartRef = useRef(null);
-  const profilePullValueRef = useRef(0);
-  const profilePullPointerIdRef = useRef(null);
-  const profilePullMovedRef = useRef(false);
-  const profilePullIgnoreClickRef = useRef(false);
+  const [isHomeHeaderCondensed, setIsHomeHeaderCondensed] = useState(false);
+  const [isHeaderPulling, setIsHeaderPulling] = useState(false);
   const preserveSelectedWeekdayRef = useRef(false);
+  const previousTabRef = useRef(TABS.HOME);
+  const topbarRef = useRef(null);
+  const headerPullGestureRef = useRef({ active: false, pointerId: null, startY: 0, deltaY: 0 });
   const weekOrder = currentPlan.weekOrder || DEFAULT_WEEK_ORDER;
   const weekDateByWeekday = getCurrentWeekDateKeysByWeekday();
 
@@ -226,6 +216,44 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     const timer = window.setInterval(() => setSessionSeconds((seconds) => seconds + 1), 1000);
     return () => window.clearInterval(timer);
   }, [isSessionPaused, isWorkoutMode]);
+
+  useEffect(() => {
+    if (activeTab !== TABS.HOME || isWorkoutMode) {
+      setIsHomeHeaderCondensed(false);
+      return undefined;
+    }
+
+    let animationFrame = 0;
+    let isCondensed = Math.max(window.scrollY || 0, document.documentElement.scrollTop || 0) >= 76;
+    let ignoreScrollUntil = 0;
+    const updateCondensedState = () => {
+      animationFrame = 0;
+      const scrollTop = Math.max(window.scrollY || 0, document.documentElement.scrollTop || 0);
+      const now = window.performance?.now?.() || Date.now();
+      if (now < ignoreScrollUntil) return;
+
+      if (!isCondensed && scrollTop >= 76) {
+        isCondensed = true;
+        ignoreScrollUntil = now + 360;
+        setIsHomeHeaderCondensed(true);
+      } else if (isCondensed && scrollTop <= 4) {
+        isCondensed = false;
+        ignoreScrollUntil = now + 300;
+        setIsHomeHeaderCondensed(false);
+      }
+    };
+    const handleScroll = () => {
+      if (animationFrame) return;
+      animationFrame = window.requestAnimationFrame(updateCondensedState);
+    };
+
+    setIsHomeHeaderCondensed(isCondensed);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [activeTab, isWorkoutMode]);
 
   useEffect(() => {
     setIsWorkoutMode(false);
@@ -261,6 +289,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     if (themeColorMeta) {
       themeColorMeta.setAttribute('content', isDark ? DARK_THEME_COLOR : LIGHT_THEME_COLOR);
     }
+    void syncSystemBarsTheme(isDark);
   }, [isDark]);
 
   useEffect(() => {
@@ -310,7 +339,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     if (!user?.id) {
       setCompletedWeekdays({});
       setWeeklyProgress({});
-      setProfileStats({ monthDays: 0, streak: 0, points: 0 });
+      setProfileStats({ monthDays: 0, streak: 0, workoutVariety: 0, points: 0, badges: [] });
       return;
     }
 
@@ -374,116 +403,11 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
     setIsInstallAvailable(false);
   };
 
-  const setProfileRevealProgress = (nextProgress) => {
-    const boundedProgress = Math.max(0, Math.min(1, nextProgress));
-    profilePullValueRef.current = boundedProgress;
-    setProfilePullProgress(boundedProgress);
-  };
-
-  const revealProfile = (progress = 1) => {
-    const shouldExpand = progress >= 0.38;
-    setIsProfileExpanded(shouldExpand);
-    setProfileRevealProgress(shouldExpand ? 1 : 0);
-  };
-
-  const handleProfilePullStart = (event) => {
-    if (!event.isPrimary) return;
-    if (event.button != null && event.button !== 0) return;
-    profilePullPointerIdRef.current = event.pointerId;
-    profilePullMovedRef.current = false;
-    profilePullStartRef.current = { y: event.clientY, progress: isProfileExpanded ? 1 : 0 };
-    profilePullValueRef.current = isProfileExpanded ? 1 : 0;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-  };
-
-  const handleProfilePullMove = (event) => {
-    if (profilePullPointerIdRef.current !== event.pointerId) return;
-    const start = profilePullStartRef.current;
-    if (!start) return;
-    const delta = event.clientY - start.y;
-    if (Math.abs(delta) > 6) {
-      profilePullMovedRef.current = true;
-      event.preventDefault();
-    }
-    if (delta <= -24) {
-      const closingProgress = Math.max(0, start.progress + delta / 118);
-      setProfileRevealProgress(closingProgress);
-      return;
-    }
-    if (delta < 4 && start.progress === 0) return;
-    const nextProgress = Math.max(0, Math.min(1, start.progress + delta / 112));
-    setProfileRevealProgress(nextProgress);
-  };
-
-  const handleProfilePullEnd = (event) => {
-    if (profilePullPointerIdRef.current !== event.pointerId) return;
-    if (!profilePullStartRef.current) return;
-    profilePullStartRef.current = null;
-    profilePullPointerIdRef.current = null;
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-    if (profilePullMovedRef.current) {
-      profilePullIgnoreClickRef.current = true;
-      revealProfile(profilePullValueRef.current);
-    }
-    profilePullMovedRef.current = false;
-  };
-
-  const toggleProfileExpansion = (event) => {
-    if (profilePullIgnoreClickRef.current) {
-      event?.preventDefault();
-      profilePullIgnoreClickRef.current = false;
-      return;
-    }
-    const nextExpanded = !isProfileExpanded;
-    setIsProfileExpanded(nextExpanded);
-    setProfileRevealProgress(nextExpanded ? 1 : 0);
-  };
-
-  const handleProfilePhotoChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) return;
-
-    if (!user?.id) {
-      setProfileAvatarMessage('Entre na conta para salvar sua foto.');
-      event.target.value = '';
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-    setProfilePhotoUrl(previewUrl);
-    setIsProfileAvatarUploading(true);
-    setProfileAvatarMessage('Enviando foto...');
-
-    try {
-      const updatedProfile = await uploadProfileAvatar(user.id, file);
-      const nextAvatarUrl = updatedProfile?.avatar_url || '';
-      setProfilePhotoUrl(nextAvatarUrl);
-      setProfileAvatarMessage('Foto atualizada no ranking.');
-      setProfileAvatarVersion((value) => value + 1);
-      onProfileUpdated?.(updatedProfile);
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(`hibrid-profile-photo:${user.id}`);
-      }
-    } catch (error) {
-      setProfilePhotoUrl(userProfile?.avatar_url || user?.user_metadata?.avatar_url || '');
-      setProfileAvatarMessage(error.message || 'Não foi possível salvar a foto.');
-    } finally {
-      URL.revokeObjectURL(previewUrl);
-      setIsProfileAvatarUploading(false);
-      event.target.value = '';
-    }
-  };
-
   const selectedWorkoutId = weekOrder[selectedWeekday] || null;
   const activeWorkout = selectedWorkoutId ? currentPlan.schedule[selectedWorkoutId] : null;
   const todayWeekdayKey = getWeekdayKeyFromDate();
   const displayName = getDisplayName(userProfile, user);
   const greeting = getGreeting(displayName);
-  const firstName = displayName.split(/\s+/).filter(Boolean)[0] || 'Atleta';
-  const profileProgress = Math.max(profilePullProgress, isProfileExpanded ? 1 : 0);
-  const profilePanelStyle = {
-    '--profile-reveal': profileProgress.toFixed(3),
-  };
 
   const daySlots = WEEKDAY_VIEW.map((weekdayKey) => {
     const workoutId = weekOrder[weekdayKey] || null;
@@ -494,6 +418,74 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
       workout: workoutId ? currentPlan.schedule[workoutId] : null,
     };
   });
+  const shouldCondenseTopbar = activeTab !== TABS.HOME || isWorkoutMode || isHomeHeaderCondensed;
+  const isCompactTopbar = shouldCondenseTopbar && !isWorkoutMode;
+
+  const expandHomeHeader = useCallback(() => {
+    if (isWorkoutMode) return;
+    preserveSelectedWeekdayRef.current = true;
+    setActiveTab(TABS.HOME);
+    setIsHomeHeaderCondensed(false);
+    setIsHeaderPulling(false);
+    topbarRef.current?.style.removeProperty('--hc-header-pull');
+    window.requestAnimationFrame(() => {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+  }, [isWorkoutMode]);
+
+  const handleHeaderPointerDown = useCallback((event) => {
+    if (!isCompactTopbar || isWorkoutMode || event.button > 0) return;
+    headerPullGestureRef.current = {
+      active: true,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      deltaY: 0,
+    };
+  }, [isCompactTopbar, isWorkoutMode]);
+
+  const handleHeaderPointerMove = useCallback((event) => {
+    const gesture = headerPullGestureRef.current;
+    if (!gesture.active || gesture.pointerId !== event.pointerId) return;
+    const deltaY = Math.max(0, event.clientY - gesture.startY);
+    gesture.deltaY = deltaY;
+    if (deltaY < 5) return;
+    setIsHeaderPulling(true);
+    topbarRef.current?.style.setProperty('--hc-header-pull', `${Math.min(deltaY, 56) * 0.18}px`);
+  }, []);
+
+  const finishHeaderPull = useCallback((event) => {
+    const gesture = headerPullGestureRef.current;
+    if (!gesture.active || gesture.pointerId !== event.pointerId) return;
+    const shouldExpand = gesture.deltaY >= 42;
+    headerPullGestureRef.current = { active: false, pointerId: null, startY: 0, deltaY: 0 };
+    setIsHeaderPulling(false);
+    topbarRef.current?.style.removeProperty('--hc-header-pull');
+    if (shouldExpand) expandHomeHeader();
+  }, [expandHomeHeader]);
+
+  const openProfile = useCallback(() => {
+    if (activeTab !== TABS.PROFILE) {
+      previousTabRef.current = activeTab;
+    }
+    setActiveTab(TABS.PROFILE);
+  }, [activeTab]);
+
+  const closeProfile = useCallback(() => {
+    setActiveTab(previousTabRef.current || TABS.HOME);
+  }, []);
+
+  const handleProfileRecordUpdated = useCallback((updatedProfile) => {
+    if (!updatedProfile) return;
+    const nextAvatarUrl = updatedProfile.avatar_url || user?.user_metadata?.avatar_url || '';
+    setProfilePhotoUrl((currentAvatarUrl) => {
+      if (currentAvatarUrl !== nextAvatarUrl) {
+        setProfileAvatarVersion((value) => value + 1);
+      }
+      return nextAvatarUrl;
+    });
+    onProfileUpdated?.(updatedProfile);
+  }, [onProfileUpdated, user?.user_metadata?.avatar_url]);
 
   const currentTabContent = useMemo(() => {
     if (activeTab === TABS.STATS) {
@@ -509,36 +501,76 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
       );
     }
     if (activeTab === TABS.NUTRITION) return <NutritionPage plan={currentPlan} />;
-    if (activeTab === TABS.HISTORY) return <HistoryPage plan={currentPlan} />;
+    if (activeTab === TABS.HISTORY) return <HistoryPage plan={currentPlan} onOpenRanking={() => setActiveTab(TABS.RANKING)} />;
     if (activeTab === TABS.PLAN) {
       return <PlanPage plan={currentPlan} userId={user?.id} onPlanUpdated={(nextPlan) => setCurrentPlan(normalizePlanModel(nextPlan))} />;
     }
-    if (activeTab === TABS.RANKING) return <RankingPage userId={user?.id} viewerAvatarUrl={profilePhotoUrl} avatarRefreshKey={profileAvatarVersion} />;
+    if (activeTab === TABS.PROFILE) {
+      return (
+        <ProfilePage
+          user={user}
+          profile={userProfile}
+          avatarUrl={profilePhotoUrl}
+          stats={profileStats}
+          onBack={closeProfile}
+          onProfileUpdated={handleProfileRecordUpdated}
+          onSignOut={onSignOut}
+        />
+      );
+    }
+    if (activeTab === TABS.RANKING) {
+      return (
+        <RankingPage
+          userId={user?.id}
+          viewerAvatarUrl={profilePhotoUrl}
+          viewerProfile={userProfile}
+          avatarRefreshKey={profileAvatarVersion}
+        />
+      );
+    }
     return null;
-  }, [activeTab, currentPlan, profileAvatarVersion, profilePhotoUrl, user?.id]);
+  }, [activeTab, closeProfile, currentPlan, handleProfileRecordUpdated, onSignOut, profileAvatarVersion, profilePhotoUrl, profileStats, user, userProfile]);
 
   return (
-    <div className="hc-app-shell min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white">
+    <div className={`hc-app-shell min-h-[100dvh] bg-[#F5F7FB] pb-28 text-gray-900 transition-colors duration-200 dark:bg-[#0A0D14] dark:text-white ${activeTab === TABS.PROFILE ? 'hc-app-shell--profile' : ''}`}>
       <header
-        className={`hc-topbar sticky top-0 z-40 pb-4 pt-4 ${activeTab === TABS.HOME && !isWorkoutMode ? '' : 'hc-topbar--condensed'} ${isWorkoutMode ? 'hc-topbar--workout' : ''} ${isProfileExpanded ? 'hc-topbar--profile-open' : ''}`}
-        style={profilePanelStyle}
+        ref={topbarRef}
+        className={`hc-shell-glass hc-topbar sticky top-0 z-40 pb-4 pt-4 ${shouldCondenseTopbar ? 'hc-topbar--condensed' : ''} ${isCompactTopbar ? 'hc-topbar--scroll-condensed' : ''} ${isHeaderPulling ? 'hc-topbar--pulling' : ''} ${isWorkoutMode ? 'hc-topbar--workout' : ''}`}
+        data-scroll-condensed={isHomeHeaderCondensed && !isWorkoutMode ? 'true' : 'false'}
+        onPointerDown={handleHeaderPointerDown}
+        onPointerMove={handleHeaderPointerMove}
+        onPointerUp={finishHeaderPull}
+        onPointerCancel={finishHeaderPull}
       >
         <div className="mx-auto w-full max-w-[430px] px-5">
         <div className="hc-logo-row mb-3 grid grid-cols-[44px_1fr_44px] items-center">
           <div>
-            {user && onSignOut ? (
+            {user ? (
               <button
-                onClick={onSignOut}
-                aria-label="Sair"
-                className="hc-icon-button flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.06] bg-white text-gray-600 shadow-[0_6px_8px_rgba(15,23,42,0.05)] transition-colors hover:text-[#0A3CFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] dark:border-white/[0.08] dark:bg-white/[0.06] dark:text-gray-300 dark:shadow-none"
+                type="button"
+                onClick={openProfile}
+                aria-label="Abrir perfil"
+                aria-current={activeTab === TABS.PROFILE ? 'page' : undefined}
+                className="hc-topbar-avatar-button"
               >
-                <LogOut size={17} />
+                <ProfileAvatar
+                  src={profilePhotoUrl}
+                  name={displayName}
+                  frame={userProfile?.avatar_frame || 'minimal'}
+                  size={44}
+                />
               </button>
             ) : (
               <div />
             )}
           </div>
           <div className="flex justify-center">
+            <button
+              type="button"
+              className="hc-topbar-logo-button"
+              onClick={expandHomeHeader}
+              aria-label={isCompactTopbar ? 'Ir para o Início e expandir os dias da semana' : 'Início com dias da semana'}
+            >
             <img
               src={`${import.meta.env.BASE_URL}HYBRIDCLUBBANNER.png`}
               alt="Hybrid Club"
@@ -548,6 +580,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
               height="214"
               className="hc-topbar-logo h-auto max-h-[74px] w-auto object-contain sm:max-h-[84px]"
             />
+            </button>
           </div>
           <button
             onClick={() => setIsDark(!isDark)}
@@ -558,102 +591,15 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
           </button>
         </div>
 
-        <div className="hc-profile-reveal" aria-hidden={!isProfileExpanded && profileProgress < 0.08}>
-          <div className="hc-profile-reveal-inner">
-            <section className="hc-profile-card" aria-label="Perfil do atleta">
-              <div className="hc-profile-orbit" aria-hidden="true" />
-              <div className="relative flex flex-col items-center">
-                <input
-                  ref={profilePhotoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={handleProfilePhotoChange}
-                />
-                <button
-                  type="button"
-                  onClick={() => profilePhotoInputRef.current?.click()}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  disabled={isProfileAvatarUploading}
-                  className="hc-profile-avatar group disabled:cursor-wait"
-                  aria-label="Escolher foto de perfil"
-                >
-                  {profilePhotoUrl ? (
-                    <img src={profilePhotoUrl} alt="Foto de perfil" className="h-full w-full rounded-full object-cover" />
-                  ) : (
-                    <span>{getInitials(displayName)}</span>
-                  )}
-                  <span className="hc-profile-camera">
-                    <Camera size={13} strokeWidth={2.2} />
-                  </span>
-                </button>
-                <p className="mt-2 text-[12px] font-medium leading-none text-[#64748B] dark:text-white/46">Atleta Hybrid</p>
-                <h2 className="mt-1 max-w-[260px] truncate text-center text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[#111827] dark:text-white">
-                  {displayName}
-                </h2>
-                <p className="mt-1 text-center text-[11px] font-medium text-[#0A3CFF] dark:text-[#FE0972]">
-                  {firstName}, mantenha o ritmo sem perder controle.
-                </p>
-                {profileAvatarMessage && (
-                  <p className="mt-1 text-center text-[10px] font-medium text-[#64748B] dark:text-white/42">
-                    {profileAvatarMessage}
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <div className="hc-profile-stat">
-                  <Flame size={14} className="text-[#0A3CFF] dark:text-[#FE0972]" />
-                  <strong>{profileStats.streak}</strong>
-                  <span>dias seguidos</span>
-                </div>
-                <div className="hc-profile-stat">
-                  <CircleCheckBig size={14} className="text-[#0A3CFF] dark:text-[#FE0972]" />
-                  <strong>{profileStats.monthDays}</strong>
-                  <span>dias no mês</span>
-                </div>
-                <div className="hc-profile-stat">
-                  <Sparkles size={14} className="text-[#0A3CFF] dark:text-[#FE0972]" />
-                  <strong>{profileStats.points}</strong>
-                  <span>pontos mensais</span>
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="hc-profile-pull-handle"
-          onClick={toggleProfileExpansion}
-          onPointerDown={handleProfilePullStart}
-          onPointerMove={handleProfilePullMove}
-          onPointerUp={handleProfilePullEnd}
-          onPointerCancel={handleProfilePullEnd}
-          aria-expanded={isProfileExpanded}
-          aria-label={isProfileExpanded ? "Recolher perfil" : "Puxar perfil"}
-        >
-          <span />
-        </button>
-
-        <div className="hc-topbar-collapsible" aria-hidden={activeTab !== TABS.HOME || isWorkoutMode}>
+        <div className="hc-topbar-collapsible" aria-hidden={shouldCondenseTopbar}>
           <div className="hc-topbar-collapsible-inner">
           <div className="hc-topbar-collapsible-content">
-            <div className="mb-2 flex items-center justify-between px-1">
+            <div className="mb-2 px-1">
               <p className="text-[0.8125rem] font-medium leading-5 text-gray-500 dark:text-gray-400">{greeting}</p>
-              {onEditProfile && (
-                <button
-                  onClick={onEditProfile}
-                  aria-label="Editar perfil"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-black/[0.04] hover:text-[#0A3CFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-[#AFC5FF]"
-                >
-                  <User size={16} />
-                </button>
-              )}
             </div>
             <div className="hc-week-rail rounded-[26px] bg-black/[0.04] p-1.5 dark:bg-white/[0.06]">
               <div className="grid grid-cols-7 gap-1.5">
-                {daySlots.map((slot) => {
+                {daySlots.map((slot, dayIndex) => {
                   const isActive = selectedWeekday === slot.weekdayKey;
                   const isCardioDay = slot.workout?.type === 'Cardio';
                   const isTodayCard = todayWeekdayKey === slot.weekdayKey;
@@ -665,6 +611,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
                       key={slot.weekdayKey}
                       onClick={() => setSelectedWeekday(slot.weekdayKey)}
                       aria-pressed={isActive}
+                      style={{ '--hc-day-index': dayIndex }}
                       className={`hc-week-day flex min-h-[72px] flex-col items-center justify-center rounded-[20px] px-1.5 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A3CFF] ${
                         isActive
                           ? 'hc-day-active bg-white text-[#0A3CFF] shadow-[0_6px_8px_rgba(10,60,255,0.12)] dark:bg-[#0A3CFF] dark:text-white'
@@ -730,7 +677,7 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[430px] px-5 pt-5">
+      <main className="hc-app-main mx-auto w-full max-w-[430px] px-5 pt-5">
         {activeTab === TABS.HOME && (
           <HomeContent
             activeWorkout={activeWorkout}
@@ -749,7 +696,6 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
               setIsWorkoutMode(true);
               setIsSessionPaused(false);
               setSessionSeconds(0);
-              setIsProfileExpanded(false);
             }}
             onToggleSessionPause={() => setIsSessionPaused((paused) => !paused)}
             onEndWorkout={() => {
@@ -762,8 +708,8 @@ export default function Dashboard({ plan = workoutPlan, user, userProfile, onEdi
         {activeTab !== TABS.HOME && <Suspense fallback={<PageFallback label="Carregando tela" />}>{currentTabContent}</Suspense>}
       </main>
 
-      {!isWorkoutMode && <div className="fixed bottom-4 left-1/2 z-50 w-[min(94vw,420px)] -translate-x-1/2 px-1">
-        <nav className="hc-dock rounded-[24px] border border-black/[0.04] px-3 py-2 dark:border-white/[0.08]">
+      {!isWorkoutMode && activeTab !== TABS.PROFILE && <div className="hc-dock-frame fixed left-1/2 z-50 -translate-x-1/2 px-1">
+        <nav className="hc-shell-glass hc-dock px-3 py-2">
           <div className="grid grid-cols-6 gap-1">
             {DOCK_ITEMS.map((item) => {
               const isActive = activeTab === item.id;

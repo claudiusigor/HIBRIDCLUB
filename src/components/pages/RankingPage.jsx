@@ -19,15 +19,23 @@ import {
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 import Achievement3D from '../ranking/Achievement3D';
+import Podium3D from '../ranking/Podium3D';
 import SeasonTrophy3D from '../ranking/SeasonTrophy3D';
+import ProfileAvatar from '../profile/ProfileAvatar';
+import { getAvatarFrameReward, getPrimaryGoalLabel } from '../../domain/profile';
 import {
   FINAL_PLACEMENT_BADGES,
+  normalizeRankingProfile,
   normalizeRanking,
   RANKING_SCORING,
 } from '../../domain/ranking';
 
 const BRAND_PINK = '#FE0972';
 const BRAND_BLUE = '#0A3CFF';
+const getFrameRewardLabel = (badgeKey) => {
+  const frame = getAvatarFrameReward(badgeKey);
+  return frame ? `Moldura ${frame.label}` : null;
+};
 
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
@@ -35,12 +43,12 @@ const MONTH_NAMES = [
 ];
 
 const BADGE_CATALOG = [
-  { key: 'consistency_10', label: 'Consistencia', detail: '10 dias', criteria: 'Treine em 10 dias diferentes na mesma temporada.', description: 'Marca o atleta que construiu ritmo e presenca ao longo do mes.', kind: 'target', geometry: 'route', Icon: Target },
-  { key: 'hybrid_complete', label: 'Hibrido completo', detail: '4 fichas', criteria: 'Complete quatro fichas diferentes durante a temporada.', description: 'Reconhece variedade real entre forca, corrida e condicionamento.', kind: 'dumbbell', geometry: 'knot', Icon: Dumbbell },
-  { key: 'streak_7', label: 'Em sequencia', detail: '7 dias', criteria: 'Mantenha uma sequencia ativa de sete dias.', description: 'Uma medalha para quem protegeu o compromisso diario.', kind: 'flame', geometry: 'split', Icon: Flame },
-  { key: 'top_10', label: 'Top 10', detail: 'Elite global', criteria: 'Finalize a temporada entre os dez melhores atletas.', description: 'Seu nome entrou na faixa de destaque da competicao global.', kind: 'medal', geometry: 'split', Icon: Award },
-  { key: 'podium', label: 'Finalista', detail: 'Top 3', criteria: 'Finalize a temporada entre os tres primeiros.', description: 'Concedida aos atletas que alcancaram o podio mensal.', kind: 'trophy', geometry: 'route', Icon: Medal },
-  { key: 'champion', label: 'Lenda', detail: 'Top 1', criteria: 'Conquiste o primeiro lugar ao fim da temporada.', description: 'O trofeu maximo da Arena, reservado ao campeao do mes.', kind: 'crown', geometry: 'knot', Icon: Crown },
+  { key: 'consistency_10', label: 'Consistencia', detail: '10 dias', criteria: 'Treine em 10 dias diferentes na mesma temporada.', description: 'Marca o atleta que construiu ritmo e presenca ao longo do mes.', reward: getFrameRewardLabel('consistency_10'), kind: 'target', geometry: 'route', Icon: Target },
+  { key: 'hybrid_complete', label: 'Hibrido completo', detail: '4 fichas', criteria: 'Complete quatro fichas diferentes durante a temporada.', description: 'Reconhece variedade real entre forca, corrida e condicionamento.', reward: getFrameRewardLabel('hybrid_complete'), kind: 'dumbbell', geometry: 'knot', Icon: Dumbbell },
+  { key: 'streak_7', label: 'Em sequencia', detail: '7 dias', criteria: 'Mantenha uma sequencia ativa de sete dias.', description: 'Uma medalha para quem protegeu o compromisso diario.', reward: getFrameRewardLabel('streak_7'), kind: 'flame', geometry: 'split', Icon: Flame },
+  { key: 'top_10', label: 'Top 10', detail: 'Elite global', criteria: 'Finalize a temporada entre os dez melhores atletas.', description: 'Seu nome entrou na faixa de destaque da competicao global.', reward: getFrameRewardLabel('top_10'), kind: 'medal', geometry: 'split', Icon: Award },
+  { key: 'podium', label: 'Finalista', detail: 'Top 3', criteria: 'Finalize a temporada entre os tres primeiros.', description: 'Concedida aos atletas que alcancaram o podio mensal.', reward: getFrameRewardLabel('podium'), kind: 'trophy', geometry: 'route', Icon: Medal },
+  { key: 'champion', label: 'Lenda', detail: 'Top 1', criteria: 'Conquiste o primeiro lugar ao fim da temporada.', description: 'O trofeu maximo da Arena, reservado ao campeao do mes.', reward: getFrameRewardLabel('champion'), kind: 'crown', geometry: 'knot', Icon: Crown },
 ];
 
 const BADGE_PRIORITY = ['champion', 'podium', 'top_10', 'hybrid_complete', 'streak_7', 'consistency_10'];
@@ -104,46 +112,17 @@ function buildFallbackShowcase(athlete, history = [], includeHistory = false) {
     .sort((left, right) => BADGE_PRIORITY.indexOf(left.key) - BADGE_PRIORITY.indexOf(right.key));
 }
 
-function getInitials(name) {
-  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function RankAvatar({ name, photoUrl, size = 44, ring = 'blue', eager = false, className = '' }) {
-  const [imageFailed, setImageFailed] = useState(false);
-
-  useEffect(() => setImageFailed(false), [photoUrl]);
-
-  const ringClass = ring === 'pink'
-    ? 'ring-2 ring-[#FE0972] ring-offset-2 ring-offset-[var(--arena-panel)]'
-    : ring === 'muted'
-      ? 'ring-1 ring-[var(--arena-border-strong)]'
-      : 'ring-2 ring-[#0A3CFF] ring-offset-2 ring-offset-[var(--arena-panel)]';
-
-  if (photoUrl && !imageFailed) {
-    return (
-      <img
-        src={photoUrl}
-        alt={`Foto de ${name}`}
-        loading={eager ? 'eager' : 'lazy'}
-        decoding="async"
-        onError={() => setImageFailed(true)}
-        className={`block shrink-0 rounded-full object-cover ${ringClass} ${className}`}
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-
+function RankAvatar({ name, photoUrl, frame = 'minimal', size = 44, eager = false, className = '' }) {
   return (
-    <div
-      aria-label={`Iniciais de ${name}`}
-      className={`flex shrink-0 items-center justify-center rounded-full bg-[#18243A] font-bold text-white ${ringClass} ${className}`}
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}
-    >
-      {getInitials(name)}
-    </div>
+    <ProfileAvatar
+      src={photoUrl}
+      name={name}
+      frame={frame}
+      size={size}
+      decorative={false}
+      eager={eager}
+      className={className}
+    />
   );
 }
 
@@ -164,9 +143,9 @@ function SeasonHeader({ daysRemaining, monthProgress, onOpenTrophy }) {
 
   return (
     <header className="hc-arena-header">
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <h1 className="truncate text-[1.25rem] font-extrabold leading-tight text-[var(--arena-text)]">Temporada {month}</h1>
+      <div className="hc-arena-header__season">
+        <div className="hc-arena-header__title">
+          <h1>Temporada {month}</h1>
           <button
             type="button"
             className="hc-season-trophy-trigger"
@@ -176,7 +155,7 @@ function SeasonHeader({ daysRemaining, monthProgress, onOpenTrophy }) {
             <SeasonTrophyMini />
           </button>
         </div>
-        <div className="mt-3 flex gap-1.5" aria-label={`${monthProgress}% da temporada concluida`}>
+        <div className="hc-arena-header__progress" aria-label={`${monthProgress}% da temporada concluida`}>
           {segments.map((segment) => (
             <span
               key={segment}
@@ -185,9 +164,9 @@ function SeasonHeader({ daysRemaining, monthProgress, onOpenTrophy }) {
           ))}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2 text-[#FF2D7A]">
+      <div className="hc-arena-header__remaining">
         <Clock3 size={20} strokeWidth={2.1} aria-hidden="true" />
-        <span className="text-[1rem] font-extrabold tabular-nums">{daysRemaining} dias</span>
+        <span>{daysRemaining} dias</span>
       </div>
     </header>
   );
@@ -241,7 +220,7 @@ function SeasonTrophyDialog({ month, year, leader, daysRemaining, onClose }) {
 
           {leader && (
             <div className="hc-season-trophy-dialog__leader">
-              <RankAvatar name={leader.display_name} photoUrl={leader.avatar_url} size={38} ring="muted" eager />
+              <RankAvatar name={leader.display_name} photoUrl={leader.avatar_url} frame={leader.avatar_frame} size={38} />
               <div className="min-w-0 flex-1">
                 <span>Líder provisório</span>
                 <strong>{leader.display_name}</strong>
@@ -301,75 +280,43 @@ function getPointOnRoute(progress) {
   return { x, y };
 }
 
-function ClimbPortrait({ entry, tone, eager = false, onOpen }) {
-  const photoUrl = entry?.avatar_url || '';
-  const [imageFailed, setImageFailed] = useState(false);
-
-  useEffect(() => setImageFailed(false), [photoUrl]);
-
+function ClimbPortrait({ entry, tone, eager = false, onOpen, size }) {
   const Frame = onOpen ? 'button' : 'div';
+  const avatarSize = size || (tone === 'leader' ? 86 : tone === 'target' ? 88 : 78);
   return (
     <Frame
       type={onOpen ? 'button' : undefined}
       onClick={onOpen}
       className={`hc-climb-portrait is-${tone} ${onOpen ? 'is-interactive' : ''}`}
-      aria-label={onOpen ? `Ver medalhas de ${entry?.display_name || 'atleta'}` : undefined}
+      aria-label={onOpen ? `Ver perfil de ${entry?.display_name || 'atleta'}` : undefined}
     >
-      <svg className="hc-climb-portrait__contours" viewBox="0 0 110 120" aria-hidden="true">
-        <path pathLength="1" d="M55 3L87 12L104 39L100 78L76 108L39 117L10 94L4 55L18 20Z" />
-        <path pathLength="1" d="M55 10L82 18L96 42L93 74L72 101L41 109L17 90L11 57L23 27Z" />
-        <path pathLength="1" d="M55 18L77 24L88 44L86 71L68 93L43 100L24 85L18 59L28 34Z" />
-      </svg>
-      <div className="hc-climb-portrait__photo">
-        {photoUrl && !imageFailed ? (
-          <img
-            src={photoUrl}
-            alt={`Foto de ${entry?.display_name || 'atleta'}`}
-            loading={eager ? 'eager' : 'lazy'}
-            decoding="async"
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <span aria-label={`Iniciais de ${entry?.display_name || 'atleta'}`}>
-            {getInitials(entry?.display_name || 'Atleta')}
-          </span>
-        )}
-      </div>
+      <RankAvatar
+        name={entry?.display_name || 'Atleta'}
+        photoUrl={entry?.avatar_url}
+        frame={entry?.avatar_frame}
+        size={avatarSize}
+        eager={eager}
+      />
     </Frame>
   );
 }
 
 function PodiumPortrait({ entry, place, eager = false, onOpen }) {
-  const photoUrl = entry?.avatar_url || '';
-  const [imageFailed, setImageFailed] = useState(false);
-
-  useEffect(() => setImageFailed(false), [photoUrl]);
-
   const Frame = onOpen ? 'button' : 'div';
   return (
     <Frame
       type={onOpen ? 'button' : undefined}
       onClick={onOpen}
       className={`hc-podium-medal is-place-${place} ${onOpen ? 'is-interactive' : ''}`}
-      aria-label={onOpen ? `Ver medalhas de ${entry?.display_name || 'atleta'}` : undefined}
+      aria-label={onOpen ? `Ver perfil de ${entry?.display_name || 'atleta'}` : undefined}
     >
-      <span className="hc-podium-medal__notch is-left" aria-hidden="true" />
-      <span className="hc-podium-medal__notch is-right" aria-hidden="true" />
-      <div className="hc-podium-medal__photo">
-        {photoUrl && !imageFailed ? (
-          <img
-            src={photoUrl}
-            alt={`Foto de ${entry?.display_name || 'atleta'}`}
-            loading={eager ? 'eager' : 'lazy'}
-            decoding="async"
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <span aria-label={`Iniciais de ${entry?.display_name || 'atleta'}`}>
-            {getInitials(entry?.display_name || 'Atleta')}
-          </span>
-        )}
-      </div>
+      <RankAvatar
+        name={entry?.display_name || 'Atleta'}
+        photoUrl={entry?.avatar_url}
+        frame={entry?.avatar_frame}
+        size={place === 1 ? 84 : 68}
+        eager={eager}
+      />
     </Frame>
   );
 }
@@ -526,12 +473,9 @@ function PodiumBlock({ entry, place, onOpenAthlete }) {
         {champion && <Crown className="hc-podium-block__crown" size={20} fill="currentColor" aria-hidden="true" />}
         <PodiumPortrait entry={entry} place={place} eager={champion} onOpen={() => onOpenAthlete(entry)} />
         <p className="mt-2 w-full truncate text-center text-[0.75rem] font-extrabold text-[var(--arena-text)]">{entry.display_name}</p>
-        <p className={`mt-0.5 text-center text-[0.6875rem] font-bold tabular-nums ${champion ? 'text-[var(--arena-ember)]' : place === 2 ? 'text-[var(--arena-cyan)]' : 'text-[var(--arena-gold)]'}`}>
+        <p className={`mt-0.5 text-center text-[0.6875rem] font-bold tabular-nums ${champion ? 'text-[var(--arena-ember)]' : place === 2 ? 'text-[var(--arena-cyan)]' : 'text-[var(--arena-violet)]'}`}>
           {formatPoints(entry.points)} pts
         </p>
-      </div>
-      <div className="hc-podium-block__base" aria-hidden="true">
-        <span>{place}</span>
       </div>
     </article>
   );
@@ -546,29 +490,16 @@ const EFFORT_CONTOURS = [
   'M64 89 C76 82 84 84 95 73 C110 58 125 69 142 51 C157 35 174 27 190 29 C203 30 216 44 230 52 C245 61 258 55 272 59 C282 62 290 69 299 70',
 ];
 
-function CeremonySignal() {
-  return (
-    <div className="hc-ceremony-signal" aria-hidden="true">
-      {[2, 1, 3].map((place) => (
-        <span key={place} className={`hc-ceremony-signal__rail is-place-${place}`}>
-          <i />
-          <i />
-          <i />
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function ArenaPodium({ podium, onOpenAthlete }) {
   return (
     <section className="mt-5" aria-labelledby="podium-title">
-      <div className="mb-3 flex items-center gap-2 px-1">
+      <div className="hc-arena-section-heading">
         <Trophy size={18} className="text-[var(--arena-ember)]" aria-hidden="true" />
-        <h2 id="podium-title" className="text-[1.125rem] font-extrabold text-[var(--arena-text)]">Pódio da Arena</h2>
+        <h2 id="podium-title">Pódio da Arena</h2>
       </div>
       <div className="hc-arena-podium">
-        <CeremonySignal />
+        <div className="hc-arena-podium__dome" aria-hidden="true" />
+        <Podium3D />
         <div className="hc-arena-podium__platform">
           <PodiumBlock entry={podium[1]} place={2} onOpenAthlete={onOpenAthlete} />
           <PodiumBlock entry={podium[0]} place={1} onOpenAthlete={onOpenAthlete} />
@@ -606,16 +537,16 @@ function RankingRow({ entry, isTarget = false, onOpenAthlete }) {
         type="button"
         className="hc-ranking-row__avatar-button"
         onClick={() => onOpenAthlete(entry)}
-        aria-label={`Ver medalhas de ${entry.display_name}`}
+        aria-label={`Ver perfil de ${entry.display_name}`}
       >
-        <RankAvatar name={entry.display_name} photoUrl={entry.avatar_url} size={36} ring={isTarget ? 'pink' : 'muted'} />
+        <RankAvatar name={entry.display_name} photoUrl={entry.avatar_url} frame={entry.avatar_frame} size={36} />
       </button>
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
           <p className="truncate text-[0.9375rem] font-extrabold">{entry.is_viewer ? 'VOCE' : entry.display_name}</p>
           {entry.title && <Sparkles size={12} className={entry.is_viewer ? 'text-white' : 'text-[var(--arena-ember)]'} aria-label={entry.title} />}
         </div>
-        <p className={`mt-0.5 flex items-center gap-1 text-[0.625rem] font-semibold ${entry.is_viewer ? 'text-white/76' : isTarget ? 'text-[#FF9BC2]' : 'text-[var(--arena-muted)]'}`}>
+        <p className={`mt-0.5 flex items-center gap-1 text-[0.6875rem] font-semibold ${entry.is_viewer ? 'text-white/76' : isTarget ? 'text-[#FF9BC2]' : 'text-[var(--arena-muted)]'}`}>
           <Flame size={10} aria-hidden="true" /> {entry.streak || 0} dias - {entry.month_days || 0} treinos
         </p>
       </div>
@@ -643,9 +574,9 @@ function RankingList({ ranking, viewer, athleteAhead, onOpenAthlete }) {
 
   return (
     <section className="mt-6" aria-labelledby="global-ranking-title">
-      <div className="mb-3 flex items-center gap-2 px-1">
+      <div className="hc-arena-section-heading">
         <TrendingUp size={18} className="text-[var(--arena-cyan)]" aria-hidden="true" />
-        <h2 id="global-ranking-title" className="text-[1.125rem] font-extrabold text-[var(--arena-text)]">Ranking global</h2>
+        <h2 id="global-ranking-title">Ranking global</h2>
       </div>
       <div className="hc-ranking-table">
         {compact.map((entry) => (
@@ -705,6 +636,13 @@ function AchievementDetail({ badge, unlocked, onClose, context }) {
           <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[var(--arena-pink-text)]">Medalha da Arena</p>
           <h2 id="achievement-detail-title" className="mt-1 text-[1.5rem] font-extrabold text-[var(--arena-text)]">{badge.label}</h2>
           <p className="mt-2 text-[0.8125rem] leading-relaxed text-[var(--arena-muted)]">{badge.description}</p>
+          {badge.reward && (
+            <div className="mt-4 flex items-center gap-2 border-y border-[var(--arena-border)] py-3 text-[var(--arena-cyan)]">
+              <Sparkles size={16} aria-hidden="true" />
+              <span className="text-[0.6875rem] font-semibold text-[var(--arena-muted)]">Recompensa exclusiva</span>
+              <strong className="ml-auto text-[0.75rem] font-extrabold">{badge.reward}</strong>
+            </div>
+          )}
           {context?.latestSeasonLabel && (
             <p className="mt-3 text-[0.75rem] font-bold text-[var(--arena-pink-text)]">
               Última conquista: {context.latestSeasonLabel}
@@ -784,25 +722,34 @@ function AthleteAchievementPopup({ athlete, history, userId, onClose, onInspectB
 
         <header className="hc-athlete-popup__header">
           <div className="hc-athlete-popup__crest">
-            <ClimbPortrait entry={athlete} tone={athlete.rank === 1 ? 'leader' : 'viewer'} eager />
+            <ClimbPortrait entry={athlete} tone={athlete.rank === 1 ? 'leader' : 'viewer'} size={58} eager />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[0.6875rem] font-bold text-[var(--arena-cyan)]">Perfil da Arena</p>
-            <h2 id="athlete-popup-title" className="truncate text-[1.125rem] font-extrabold text-[var(--arena-text)]">
+          <div className="hc-athlete-popup__identity">
+            <p>Perfil da Arena</p>
+            <h2 id="athlete-popup-title">
               {athlete.display_name}
             </h2>
-            <p className="mt-1 text-[0.6875rem] font-semibold text-[var(--arena-muted)]">
+            <p className="hc-athlete-popup__meta">
               #{athlete.rank} · {athlete.division || 'Desafiante'} · {formatPoints(athlete.points)} pts
             </p>
           </div>
         </header>
 
+        <section className="hc-athlete-popup__profile" aria-label={`Apresentação de ${athlete.display_name}`}>
+          <div className="hc-athlete-popup__goal">
+            <Target size={14} aria-hidden="true" />
+            <span>Objetivo</span>
+            <strong>{getPrimaryGoalLabel(athlete.primary_goal)}</strong>
+          </div>
+          <p className={athlete.bio ? '' : 'is-empty'}>
+            {athlete.bio || 'Bio ainda não informada.'}
+          </p>
+        </section>
+
         <section className="hc-athlete-popup__collection" aria-label={`Medalhas conquistadas por ${athlete.display_name}`}>
           <div className="hc-athlete-popup__collection-title">
-            <div>
-              <h3>Medalhas conquistadas</h3>
-              <p>{totalMedals} {totalMedals === 1 ? 'conquista' : 'conquistas'}</p>
-            </div>
+            <h3>Medalhas conquistadas</h3>
+            <p>{totalMedals} {totalMedals === 1 ? 'conquista' : 'conquistas'}</p>
             {loading && <LoaderCircle className="hc-athlete-popup__loader" size={15} aria-label="Atualizando medalhas" />}
           </div>
 
@@ -856,12 +803,10 @@ function AchievementRail({ viewer, history }) {
 
   return (
     <section className="mt-6" aria-labelledby="achievements-title">
-      <div className="mb-3 flex items-center justify-between gap-3 px-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <Medal size={18} className="text-[var(--arena-cyan)]" aria-hidden="true" />
-          <h2 id="achievements-title" className="truncate text-[1.125rem] font-extrabold text-[var(--arena-text)]">Conquistas</h2>
-        </div>
-        <span className="text-[0.75rem] font-extrabold text-[var(--arena-pink-text)]">{earned.size}/{BADGE_CATALOG.length}</span>
+      <div className="hc-arena-section-heading hc-arena-section-heading--with-meta">
+        <Medal size={18} className="text-[var(--arena-cyan)]" aria-hidden="true" />
+        <h2 id="achievements-title">Conquistas</h2>
+        <span>{earned.size}/{BADGE_CATALOG.length}</span>
       </div>
       <div className="hc-achievement-rail -mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {BADGE_CATALOG.map((badge) => {
@@ -882,6 +827,9 @@ function AchievementRail({ viewer, history }) {
               </span>
               <span className={`mt-3 block text-center text-[0.6875rem] font-bold leading-tight ${unlocked ? 'text-[var(--arena-text)]' : 'text-[var(--arena-muted)]'}`}>{label}</span>
               <span className="mt-1 block text-center text-[0.625rem] font-medium text-[var(--arena-muted)]">{detail}</span>
+              <span className="mt-1.5 block text-center text-[0.625rem] font-bold leading-tight text-[var(--arena-cyan)]">
+                Libera {badge.reward}
+              </span>
             </button>
           );
         })}
@@ -901,7 +849,7 @@ function SeasonHistory({ history }) {
   if (history.length === 0) return null;
   return (
     <section className="mt-7" aria-labelledby="history-title">
-      <h2 id="history-title" className="px-1 text-[0.9375rem] font-bold text-[var(--arena-text)]">Temporadas anteriores</h2>
+      <h2 id="history-title" className="hc-arena-subsection-title">Temporadas anteriores</h2>
       <div className="mt-3 space-y-2">
         {history.slice(0, 3).map((season) => (
           <div key={season.season_start} className="flex items-center gap-3 rounded-[14px] bg-[var(--arena-panel)] px-3.5 py-3 ring-1 ring-[var(--arena-border)]">
@@ -941,7 +889,7 @@ function RankingRules({ rules }) {
 
 function RankingSkeleton() {
   return (
-    <div className="hc-ranking-arena -mx-5 -mt-5 min-h-[calc(100dvh-8rem)] px-5 pb-32 pt-5" aria-label="Carregando ranking">
+    <div className="hc-ranking-arena -mx-5 -mt-10 min-h-[calc(100dvh-8rem)] px-5 pb-32 pt-5" aria-label="Carregando ranking">
       <div className="animate-pulse">
         <div className="flex justify-between">
           <div className="h-10 w-44 rounded-[10px] bg-[var(--arena-skeleton)]" />
@@ -959,7 +907,7 @@ function RankingSkeleton() {
 
 function RankingError({ message, onRetry }) {
   return (
-    <div className="hc-ranking-arena -mx-5 -mt-5 flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center px-8 pb-32 text-center">
+    <div className="hc-ranking-arena -mx-5 -mt-10 flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center px-8 pb-32 text-center">
       <span className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[rgb(255_106_61_/_0.12)] text-[var(--arena-ember)]">
         <Trophy size={22} aria-hidden="true" />
       </span>
@@ -972,7 +920,7 @@ function RankingError({ message, onRetry }) {
   );
 }
 
-export default function RankingPage({ userId, viewerAvatarUrl = '', avatarRefreshKey = 0 }) {
+export default function RankingPage({ userId, viewerAvatarUrl = '', viewerProfile = {}, avatarRefreshKey = 0 }) {
   const [ranking, setRanking] = useState([]);
   const [history, setHistory] = useState([]);
   const [rules, setRules] = useState(RANKING_SCORING);
@@ -997,14 +945,26 @@ export default function RankingPage({ userId, viewerAvatarUrl = '', avatarRefres
 
       if (!quiet) setLoading(true);
       try {
-        const [{ data, error: rankingError }, historyResponse, rulesResponse] = await Promise.all([
+        const [{ data, error: rankingError }, historyResponse, rulesResponse, profileShowcaseResponse] = await Promise.all([
           supabase.rpc('get_monthly_ranking', { p_viewer_id: userId || null }),
           supabase.rpc('get_ranking_season_history', { p_viewer_id: userId || null }),
           supabase.rpc('get_ranking_rules'),
+          supabase.rpc('get_ranking_profile_showcase'),
         ]);
         if (rankingError) throw rankingError;
         if (!isMounted) return;
-        setRanking(normalizeRanking(data || [], userId, viewerAvatarUrl));
+        const showcaseByUser = new Map(
+          (profileShowcaseResponse.error ? [] : (profileShowcaseResponse.data || []))
+            .map((row) => [row.user_id, normalizeRankingProfile(row)])
+        );
+        const localViewerProfile = normalizeRankingProfile(viewerProfile);
+        const normalizedRanking = normalizeRanking(data || [], userId, viewerAvatarUrl, viewerProfile)
+          .map((entry) => ({
+            ...entry,
+            ...(showcaseByUser.get(entry.user_id) || {}),
+            ...(entry.is_viewer ? localViewerProfile : {}),
+          }));
+        setRanking(normalizedRanking);
         setHistory(historyResponse.error ? [] : (historyResponse.data || []));
         if (!rulesResponse.error && rulesResponse.data?.[0]) {
           setRules({
@@ -1038,7 +998,15 @@ export default function RankingPage({ userId, viewerAvatarUrl = '', avatarRefres
       window.clearInterval(syncTimer);
       supabase.removeChannel(profileChannel);
     };
-  }, [userId, viewerAvatarUrl, avatarRefreshKey, refreshKey]);
+  }, [
+    userId,
+    viewerAvatarUrl,
+    viewerProfile?.avatar_frame,
+    viewerProfile?.bio,
+    viewerProfile?.primary_goal,
+    avatarRefreshKey,
+    refreshKey,
+  ]);
 
   const viewer = ranking.find((entry) => entry.is_viewer || entry.user_id === userId) || null;
   const podium = ranking.slice(0, 3);
@@ -1052,7 +1020,7 @@ export default function RankingPage({ userId, viewerAvatarUrl = '', avatarRefres
   if (error && ranking.length === 0) return <RankingError message={error} onRetry={() => setRefreshKey((value) => value + 1)} />;
 
   return (
-    <div className="hc-ranking-arena relative -mx-5 -mt-5 min-h-[calc(100dvh-8rem)] overflow-hidden px-5 pb-32 pt-5">
+    <div className="hc-ranking-arena relative -mx-5 -mt-10 min-h-[calc(100dvh-8rem)] overflow-hidden px-5 pb-32 pt-5">
       <div className="hc-ranking-arena__light" aria-hidden="true" />
       <div className="relative mx-auto w-full max-w-[430px]">
         <SeasonHeader

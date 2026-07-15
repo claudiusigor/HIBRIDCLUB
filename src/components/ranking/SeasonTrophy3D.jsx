@@ -1,97 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-
-const TROPHY_IMAGE_URL = `${import.meta.env.BASE_URL}materials/arena-shield-july-reference.png`;
-const FACE_HEIGHT = 4.75;
-const BODY_DEPTH = 0.24;
-
-// One contour drives the image cutout, the metal body and the rear plate.
-const SILHOUETTE = [
-  ['M', 0.5, 0.071],
-  ['C', 0.59, 0.083, 0.68, 0.105, 0.758, 0.132],
-  ['C', 0.772, 0.274, 0.762, 0.446, 0.714, 0.572],
-  ['C', 0.677, 0.664, 0.595, 0.739, 0.529, 0.771],
-  ['L', 0.724, 0.771],
-  ['L', 0.787, 0.944],
-  ['C', 0.791, 0.953, 0.781, 0.959, 0.769, 0.959],
-  ['L', 0.231, 0.959],
-  ['C', 0.219, 0.959, 0.21, 0.953, 0.214, 0.943],
-  ['L', 0.272, 0.771],
-  ['L', 0.47, 0.771],
-  ['C', 0.4, 0.739, 0.323, 0.663, 0.285, 0.572],
-  ['C', 0.238, 0.446, 0.228, 0.274, 0.242, 0.132],
-  ['C', 0.321, 0.105, 0.412, 0.083, 0.5, 0.071],
-  ['Z'],
-];
-
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-    image.onload = () => resolve(image);
-    image.onerror = reject;
-    image.src = src;
-  });
-}
-
-function traceCanvasSilhouette(context, width, height) {
-  context.beginPath();
-  SILHOUETTE.forEach(([command, ...values]) => {
-    if (command === 'M') context.moveTo(values[0] * width, values[1] * height);
-    if (command === 'L') context.lineTo(values[0] * width, values[1] * height);
-    if (command === 'C') {
-      context.bezierCurveTo(
-        values[0] * width,
-        values[1] * height,
-        values[2] * width,
-        values[3] * height,
-        values[4] * width,
-        values[5] * height,
-      );
-    }
-    if (command === 'Z') context.closePath();
-  });
-}
-
-function createFaceTexture(THREE, renderer, sourceImage) {
-  const canvas = document.createElement('canvas');
-  canvas.width = sourceImage.naturalWidth || sourceImage.width;
-  canvas.height = sourceImage.naturalHeight || sourceImage.height;
-  const context = canvas.getContext('2d');
-
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.save();
-  traceCanvasSilhouette(context, canvas.width, canvas.height);
-  context.clip();
-  context.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
-  context.restore();
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.premultiplyAlpha = true;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.needsUpdate = true;
-  return texture;
-}
+import { __iconNode as trophyIcon } from 'lucide-react/dist/esm/icons/trophy.mjs';
 
 function createBrushedTexture(THREE, renderer) {
-  const size = 256;
+  const size = 384;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
   const image = context.createImageData(size, size);
-  let seed = 811;
+  let seed = 7411;
   const random = () => {
-    seed = (seed * 48271) % 2147483647;
-    return seed / 2147483647;
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
   };
 
   for (let y = 0; y < size; y += 1) {
-    const band = Math.sin(y * 0.31) * 5 + Math.sin(y * 0.071) * 9;
+    const sweep = Math.sin(y * 0.16) * 2.1 + Math.sin(y * 0.043) * 1.2;
     for (let x = 0; x < size; x += 1) {
-      const value = Math.max(0, Math.min(255, 138 + band + (random() - 0.5) * 13));
+      const value = Math.max(78, Math.min(196, 146 + sweep + (random() - 0.5) * 10));
       const index = (y * size + x) * 4;
       image.data[index] = value;
       image.data[index + 1] = value;
@@ -102,158 +28,307 @@ function createBrushedTexture(THREE, renderer) {
   context.putImageData(image, 0, 0);
 
   const texture = new THREE.CanvasTexture(canvas);
-  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1.2, 3.4);
+  texture.repeat.set(1.4, 2.8);
+  texture.needsUpdate = true;
   return texture;
 }
 
-function createSilhouetteShape(THREE, faceWidth) {
-  const shape = new THREE.Shape();
-  const point = (x, y) => [(x - 0.5) * faceWidth, (0.5 - y) * FACE_HEIGHT];
+function createPlaqueTexture(THREE, renderer, label) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 280;
+  const context = canvas.getContext('2d');
+  const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, '#10151c');
+  gradient.addColorStop(0.5, '#252c35');
+  gradient.addColorStop(1, '#0d1117');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = 'rgba(219, 191, 126, 0.74)';
+  context.lineWidth = 5;
+  context.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
+  context.textAlign = 'center';
+  context.fillStyle = '#aab5c3';
+  context.font = '700 31px Inter, system-ui, sans-serif';
+  context.fillText('HYBRID CLUB', canvas.width / 2, 70);
+  context.fillStyle = '#f1d898';
+  context.font = '800 61px Inter, system-ui, sans-serif';
+  context.fillText(label.toUpperCase(), canvas.width / 2, 151);
+  context.fillStyle = '#7e8998';
+  context.font = '700 27px Inter, system-ui, sans-serif';
+  context.fillText('ARENA  /  2026', canvas.width / 2, 216);
 
-  SILHOUETTE.forEach(([command, ...values]) => {
-    if (command === 'M') shape.moveTo(...point(values[0], values[1]));
-    if (command === 'L') shape.lineTo(...point(values[0], values[1]));
-    if (command === 'C') {
-      shape.bezierCurveTo(
-        ...point(values[0], values[1]),
-        ...point(values[2], values[3]),
-        ...point(values[4], values[5]),
-      );
-    }
-    if (command === 'Z') shape.closePath();
-  });
-  return shape;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  texture.needsUpdate = true;
+  return texture;
 }
 
-function createContour(THREE, shape, material, z, scale = 1) {
-  const points = shape.getSpacedPoints(196).map((point) => new THREE.Vector3(point.x, point.y, z));
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  const contour = new THREE.LineLoop(geometry, material);
-  contour.scale.setScalar(scale);
-  return contour;
+function createShadowTexture(THREE) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const context = canvas.getContext('2d');
+  const gradient = context.createRadialGradient(256, 64, 10, 256, 64, 246);
+  gradient.addColorStop(0, 'rgba(1, 4, 10, 0.72)');
+  gradient.addColorStop(0.48, 'rgba(1, 4, 10, 0.28)');
+  gradient.addColorStop(1, 'rgba(1, 4, 10, 0)');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
 }
 
-function createHybridMark(THREE, material) {
-  const group = new THREE.Group();
-  const addBar = (x, y, rotation, length) => {
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.065, length, 0.022), material);
-    bar.position.set(x, y, 0);
-    bar.rotation.z = rotation;
-    group.add(bar);
-  };
-  addBar(-0.14, 0.03, -0.5, 0.67);
-  addBar(0.07, 0.03, 0.5, 0.67);
-  addBar(0.25, -0.02, 0.5, 0.54);
-  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.055, 0.022), material);
-  bridge.position.set(0.035, -0.12, 0);
-  group.add(bridge);
-  return group;
+function roundedPolygonPath(THREE, points, PathType = THREE.Shape, radius = 0.08) {
+  const path = new PathType();
+  const corners = points.map(([x, y], index) => {
+    const previous = points[(index - 1 + points.length) % points.length];
+    const next = points[(index + 1) % points.length];
+    const previousLength = Math.hypot(previous[0] - x, previous[1] - y);
+    const nextLength = Math.hypot(next[0] - x, next[1] - y);
+    return {
+      corner: [x, y],
+      incoming: [
+        x + ((previous[0] - x) / previousLength) * Math.min(radius, previousLength * 0.25),
+        y + ((previous[1] - y) / previousLength) * Math.min(radius, previousLength * 0.25),
+      ],
+      outgoing: [
+        x + ((next[0] - x) / nextLength) * Math.min(radius, nextLength * 0.25),
+        y + ((next[1] - y) / nextLength) * Math.min(radius, nextLength * 0.25),
+      ],
+    };
+  });
+  path.moveTo(...corners[0].incoming);
+  corners.forEach(({ incoming, corner, outgoing }) => {
+    path.lineTo(...incoming);
+    path.quadraticCurveTo(...corner, ...outgoing);
+  });
+  path.closePath();
+  return path;
 }
 
-function createArenaShield(THREE, renderer, sourceImage) {
-  const trophy = new THREE.Group();
-  const faceTexture = createFaceTexture(THREE, renderer, sourceImage);
-  const brushedTexture = createBrushedTexture(THREE, renderer);
-  const imageAspect = (sourceImage.naturalWidth || sourceImage.width) / (sourceImage.naturalHeight || sourceImage.height);
-  const faceWidth = FACE_HEIGHT * imageAspect;
-  const shape = createSilhouetteShape(THREE, faceWidth);
-
-  const capMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x202126,
-    metalness: 0.92,
-    roughness: 0.31,
-    roughnessMap: brushedTexture,
-    bumpMap: brushedTexture,
-    bumpScale: 0.003,
-    clearcoat: 0.12,
-  });
-  const sideMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xb0a58f,
-    metalness: 0.84,
-    roughness: 0.25,
-    roughnessMap: brushedTexture,
-    bumpMap: brushedTexture,
-    bumpScale: 0.004,
-    clearcoat: 0.22,
-    clearcoatRoughness: 0.16,
-    emissive: 0x17130d,
-    emissiveIntensity: 0.26,
-  });
-  const rearMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x17191d,
-    metalness: 0.93,
-    roughness: 0.37,
-    roughnessMap: brushedTexture,
-    bumpMap: brushedTexture,
-    bumpScale: 0.004,
-    side: THREE.DoubleSide,
-  });
-  const engravingMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xa59d8e,
-    metalness: 0.96,
-    roughness: 0.26,
-    side: THREE.DoubleSide,
-  });
-
-  const bodyGeometry = new THREE.ExtrudeGeometry(shape, {
-    depth: BODY_DEPTH,
+function extrudedPolygon(THREE, points, depth, material, z = 0, bevel = 0.035) {
+  const geometry = new THREE.ExtrudeGeometry(roundedPolygonPath(THREE, points), {
+    depth,
     steps: 1,
-    curveSegments: 72,
+    curveSegments: 10,
     bevelEnabled: true,
     bevelSegments: 5,
-    bevelSize: 0.018,
-    bevelThickness: 0.025,
+    bevelSize: bevel,
+    bevelThickness: bevel,
   });
-  bodyGeometry.translate(0, 0, -BODY_DEPTH);
-  const body = new THREE.Mesh(bodyGeometry, [capMaterial, sideMaterial]);
-  trophy.add(body);
+  geometry.translate(0, 0, -depth / 2);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.z = z;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
 
-  const grooveMaterial = new THREE.LineBasicMaterial({
-    color: 0xdac9a7,
-    transparent: true,
-    opacity: 0.78,
+function extrudedRing(THREE, outer, inner, depth, material, z = 0, bevel = 0.03) {
+  const shape = roundedPolygonPath(THREE, outer);
+  shape.holes.push(roundedPolygonPath(THREE, [...inner].reverse(), THREE.Path, 0.065));
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth,
+    steps: 1,
+    curveSegments: 10,
+    bevelEnabled: true,
+    bevelSegments: 5,
+    bevelSize: bevel,
+    bevelThickness: bevel,
   });
-  [-0.045, -0.085, -0.125, -0.165, -0.205].forEach((z, index) => {
-    trophy.add(createContour(THREE, shape, grooveMaterial, z, 1 - index * 0.0008));
+  geometry.translate(0, 0, -depth / 2);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.z = z;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function createAccentRail(THREE, points, material, z = 0.34) {
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y]) => new THREE.Vector3(x, y, z)));
+  const rail = new THREE.Mesh(new THREE.TubeGeometry(curve, 56, 0.018, 8, false), material);
+  rail.castShadow = true;
+  return rail;
+}
+
+function iconNodesToSvg(iconNode) {
+  const allowed = new Set(['d', 'cx', 'cy', 'r', 'x', 'y', 'x1', 'x2', 'y1', 'y2', 'width', 'height', 'rx', 'ry', 'points']);
+  const elements = iconNode.map(([tag, attributes]) => {
+    const serialized = Object.entries(attributes)
+      .filter(([key]) => allowed.has(key))
+      .map(([key, value]) => `${key}="${String(value)}"`)
+      .join(' ');
+    return `<${tag} ${serialized} />`;
+  }).join('');
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${elements}</svg>`;
+}
+
+function createReliefIcon(THREE, SVGLoader, materials) {
+  const icon = new THREE.Group();
+  const parsed = new SVGLoader().parse(iconNodesToSvg(trophyIcon));
+  parsed.paths.forEach((path) => {
+    path.subPaths.forEach((subPath) => {
+      const sourcePoints = subPath.getPoints(16);
+      if (sourcePoints.length < 2) return;
+      const points = sourcePoints.map((point) => new THREE.Vector3(
+        (point.x - 12) * 0.06,
+        (12 - point.y) * 0.06,
+        0,
+      ));
+      const closed = points.length > 2 && points[0].distanceTo(points[points.length - 1]) < 0.025;
+      if (closed) points.pop();
+      const curve = new THREE.CurvePath();
+      for (let index = 0; index < points.length - 1; index += 1) {
+        curve.add(new THREE.LineCurve3(points[index], points[index + 1]));
+      }
+      if (closed) curve.add(new THREE.LineCurve3(points[points.length - 1], points[0]));
+      const segments = Math.max(20, points.length * 2);
+      const backing = new THREE.Mesh(new THREE.TubeGeometry(curve, segments, 0.052, 8, closed), materials.graphite);
+      const front = new THREE.Mesh(new THREE.TubeGeometry(curve, segments, 0.031, 8, closed), materials.gold);
+      backing.position.z = 0.435;
+      front.position.z = 0.47;
+      icon.add(backing, front);
+    });
   });
+  return icon;
+}
 
-  const rearPlate = new THREE.Mesh(new THREE.ShapeGeometry(shape, 72), rearMaterial);
-  rearPlate.position.z = -BODY_DEPTH - 0.027;
-  rearPlate.scale.setScalar(0.968);
-  trophy.add(rearPlate);
+function createMaterials(THREE, brushedTexture) {
+  const metal = {
+    metalness: 0.95,
+    roughnessMap: brushedTexture,
+    bumpMap: brushedTexture,
+    bumpScale: 0.0024,
+    anisotropy: 0.78,
+    anisotropyRotation: Math.PI / 2,
+  };
+  return {
+    graphite: new THREE.MeshPhysicalMaterial({ ...metal, color: 0x11161d, roughness: 0.49, clearcoat: 0.1 }),
+    darkMetal: new THREE.MeshPhysicalMaterial({ ...metal, color: 0x303740, roughness: 0.4, clearcoat: 0.15 }),
+    titanium: new THREE.MeshPhysicalMaterial({ ...metal, color: 0xaeb9c5, roughness: 0.33, clearcoat: 0.16 }),
+    gold: new THREE.MeshPhysicalMaterial({ ...metal, color: 0xd4ad54, roughness: 0.27, clearcoat: 0.25, clearcoatRoughness: 0.2 }),
+    paleGold: new THREE.MeshPhysicalMaterial({ ...metal, color: 0xf0d891, roughness: 0.25, clearcoat: 0.3 }),
+    pink: new THREE.MeshPhysicalMaterial({ ...metal, color: 0xfe0972, emissive: 0xfe0972, emissiveIntensity: 0.025, roughness: 0.29 }),
+    blue: new THREE.MeshPhysicalMaterial({ ...metal, color: 0x2f78ff, emissive: 0x2f78ff, emissiveIntensity: 0.022, roughness: 0.29 }),
+  };
+}
 
-  const rearRing = new THREE.Mesh(new THREE.RingGeometry(0.58, 0.6, 96), engravingMaterial);
-  rearRing.position.set(0, 0.18, -BODY_DEPTH - 0.042);
-  rearRing.rotation.y = Math.PI;
-  trophy.add(rearRing);
+function createHybridTrophy(THREE, SVGLoader, renderer, label) {
+  const trophy = new THREE.Group();
+  const brushedTexture = createBrushedTexture(THREE, renderer);
+  const plaqueTexture = createPlaqueTexture(THREE, renderer, label);
+  const shadowTexture = createShadowTexture(THREE);
+  const materials = createMaterials(THREE, brushedTexture);
 
-  const rearMark = createHybridMark(THREE, engravingMaterial);
-  rearMark.position.set(0, 0.18, -BODY_DEPTH - 0.05);
-  rearMark.rotation.y = Math.PI;
-  rearMark.scale.setScalar(1.35);
-  trophy.add(rearMark);
+  const sculpture = new THREE.Group();
+  sculpture.position.y = 0.38;
 
-  const front = new THREE.Mesh(
-    new THREE.PlaneGeometry(faceWidth, FACE_HEIGHT),
-    new THREE.MeshBasicMaterial({
-      map: faceTexture,
-      transparent: true,
-      alphaTest: 0.02,
-      depthWrite: true,
-      toneMapped: false,
-    }),
+  const leftOuter = [
+    [-1.2, -1.06], [-1.43, -0.2], [-1.23, 0.78], [-0.58, 1.72],
+    [-0.13, 1.35], [-0.42, 0.55], [-0.28, -0.2], [-0.62, -0.92],
+  ];
+  const leftInner = [
+    [-0.93, -0.73], [-1.08, -0.12], [-0.92, 0.63], [-0.56, 1.2],
+    [-0.39, 1.03], [-0.65, 0.43], [-0.54, -0.23], [-0.7, -0.72],
+  ];
+  const rightOuter = leftOuter.map(([x, y]) => [-x, y]).reverse();
+  const rightInner = leftInner.map(([x, y]) => [-x, y]).reverse();
+
+  const rearCore = extrudedPolygon(THREE, [
+    [-0.24, -1.48], [-0.34, -0.15], [-0.26, 0.9], [0, 1.58],
+    [0.26, 0.9], [0.34, -0.15], [0.24, -1.48],
+  ], 0.34, materials.gold, -0.1, 0.045);
+  sculpture.add(rearCore);
+  sculpture.add(extrudedPolygon(THREE, [
+    [-0.14, -1.42], [-0.2, -0.12], [-0.14, 0.76], [0, 1.2],
+    [0.14, 0.76], [0.2, -0.12], [0.14, -1.42],
+  ], 0.22, materials.graphite, 0.1, 0.03));
+  sculpture.add(extrudedRing(THREE, leftOuter, leftInner, 0.31, materials.darkMetal, 0.02, 0.045));
+  sculpture.add(extrudedRing(THREE, rightOuter, rightInner, 0.27, materials.titanium, 0.09, 0.04));
+
+  sculpture.add(
+    createAccentRail(THREE, [[-1.18, -0.82], [-1.32, -0.12], [-1.09, 0.7], [-0.55, 1.48]], materials.pink, 0.24),
+    createAccentRail(THREE, [[1.18, -0.82], [1.32, -0.12], [1.09, 0.7], [0.55, 1.48]], materials.blue, 0.31),
   );
-  front.position.z = 0.029;
-  trophy.add(front);
 
-  trophy.userData.textures = [faceTexture, brushedTexture];
+  const medallion = new THREE.Mesh(new THREE.CylinderGeometry(0.69, 0.69, 0.24, 72), materials.graphite);
+  medallion.rotation.x = Math.PI / 2;
+  medallion.position.set(0, 0.32, 0.27);
+  medallion.castShadow = true;
+  sculpture.add(medallion);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.075, 14, 80), materials.gold);
+  ring.position.set(0, 0.32, 0.42);
+  ring.castShadow = true;
+  sculpture.add(ring);
+  const innerRing = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.018, 8, 64), materials.titanium);
+  innerRing.position.set(0, 0.32, 0.415);
+  sculpture.add(innerRing);
+  const relief = createReliefIcon(THREE, SVGLoader, materials);
+  relief.position.set(0, 0.32, 0.08);
+  relief.scale.setScalar(0.76);
+  sculpture.add(relief);
+
+  const crownPoints = [
+    [-0.48, 0], [-0.58, 0.43], [-0.25, 0.22], [0, 0.64],
+    [0.25, 0.22], [0.58, 0.43], [0.48, 0],
+  ];
+  const crown = extrudedPolygon(THREE, crownPoints, 0.18, materials.gold, 0.2, 0.035);
+  crown.position.y = 1.58;
+  sculpture.add(crown);
+  [-0.47, 0, 0.47].forEach((x, index) => {
+    const jewel = new THREE.Mesh(new THREE.SphereGeometry(0.055, 20, 12), index === 1 ? materials.pink : materials.blue);
+    jewel.position.set(x, index === 1 ? 2.2 : 2, 0.32);
+    sculpture.add(jewel);
+  });
+  trophy.add(sculpture);
+
+  const base = new THREE.Group();
+  base.position.y = -1.72;
+  const baseOuter = [[-1.38, 0.36], [1.38, 0.36], [1.58, -0.4], [-1.58, -0.4]];
+  const baseMiddle = [[-1.22, 0.25], [1.22, 0.25], [1.37, -0.27], [-1.37, -0.27]];
+  base.add(extrudedPolygon(THREE, baseOuter, 0.76, materials.graphite, 0, 0.055));
+  base.add(extrudedPolygon(THREE, baseMiddle, 0.11, materials.titanium, 0.425, 0.022));
+  const plaqueMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    map: plaqueTexture,
+    metalness: 0.5,
+    roughness: 0.32,
+    clearcoat: 0.16,
+  });
+  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(2.22, 0.43), plaqueMaterial);
+  plaque.position.set(0, -0.015, 0.495);
+  base.add(plaque);
+  trophy.add(base);
+
+  const neck = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.18, 0.5), materials.gold);
+  neck.position.set(0, -1.31, 0);
+  neck.castShadow = true;
+  trophy.add(neck);
+
+  const contactShadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.6, 0.64),
+    new THREE.MeshBasicMaterial({ color: 0x03060c, map: shadowTexture, transparent: true, opacity: 0.26, depthWrite: false, toneMapped: false }),
+  );
+  contactShadow.position.set(0, -2.17, -0.42);
+  trophy.add(contactShadow);
+
+  trophy.traverse((object) => {
+    if (!object.isMesh) return;
+    object.castShadow = object !== contactShadow;
+    object.receiveShadow = object !== contactShadow;
+  });
+  trophy.userData.textures = [brushedTexture, plaqueTexture, shadowTexture];
+  trophy.userData.contactShadow = contactShadow;
   return trophy;
 }
 
-export default function SeasonTrophy3D({ label = 'Troféu de Julho' }) {
+export default function SeasonTrophy3D({ label = 'Trofeu de Julho' }) {
   const frameRef = useRef(null);
   const canvasRef = useRef(null);
   const [renderState, setRenderState] = useState('loading');
@@ -262,7 +337,9 @@ export default function SeasonTrophy3D({ label = 'Troféu de Julho' }) {
     let disposed = false;
     let renderer;
     let trophy;
-    let observer;
+    let resizeObserver;
+    let intersectionObserver;
+    let themeObserver;
     let animationFrame;
     let environmentTarget;
     let pmremGenerator;
@@ -271,13 +348,15 @@ export default function SeasonTrophy3D({ label = 'Troféu de Julho' }) {
 
     const build = async () => {
       try {
-        const [THREE, { HDRLoader }, sourceImage] = await Promise.all([
+        const [THREE, { HDRLoader }, { SVGLoader }, { RectAreaLightUniformsLib }] = await Promise.all([
           import('three'),
           import('three/addons/loaders/HDRLoader.js'),
-          loadImage(TROPHY_IMAGE_URL),
+          import('three/addons/loaders/SVGLoader.js'),
+          import('three/addons/lights/RectAreaLightUniformsLib.js'),
         ]);
         if (disposed || !frameRef.current || !canvasRef.current) return;
 
+        RectAreaLightUniformsLib.init();
         const frame = frameRef.current;
         const canvas = canvasRef.current;
         renderer = new THREE.WebGLRenderer({
@@ -290,85 +369,131 @@ export default function SeasonTrophy3D({ label = 'Troféu de Julho' }) {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 0.92;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         const scene = new THREE.Scene();
-        const camera = new THREE.OrthographicCamera(-3, 3, 3, -3, 0.1, 30);
-        camera.position.set(0, 0, 8);
+        const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 40);
+        camera.position.set(0, 0.05, 10.4);
+        camera.lookAt(0, 0.08, 0);
 
         pmremGenerator = new THREE.PMREMGenerator(renderer);
-        const studio = await new HDRLoader().loadAsync(`${import.meta.env.BASE_URL}materials/studio_small_05_1k.hdr`);
-        environmentTarget = pmremGenerator.fromEquirectangular(studio);
-        studio.dispose();
+        try {
+          const studio = await new HDRLoader().loadAsync(`${import.meta.env.BASE_URL}materials/studio_small_05_1k.hdr`);
+          environmentTarget = pmremGenerator.fromEquirectangular(studio);
+          studio.dispose();
+        } catch {
+          const room = await import('three/addons/environments/RoomEnvironment.js');
+          environmentTarget = pmremGenerator.fromScene(new room.RoomEnvironment(), 0.04);
+        }
         if (disposed) return;
         scene.environment = environmentTarget.texture;
-        scene.environmentIntensity = 0.72;
-        scene.environmentRotation.set(0, 0.34, 0);
+        scene.environmentRotation.set(0, 0.3, 0);
 
-        trophy = createArenaShield(THREE, renderer, sourceImage);
-        trophy.rotation.set(-0.018, -0.09, 0);
-        trophy.position.y = 0.14;
+        trophy = createHybridTrophy(THREE, SVGLoader, renderer, label);
+        trophy.rotation.set(-0.025, -0.12, 0.004);
+        trophy.position.y = 0.04;
         scene.add(trophy);
 
-        const contactShadow = new THREE.Mesh(
-          new THREE.CircleGeometry(1, 96),
-          new THREE.MeshBasicMaterial({ color: 0x050608, transparent: true, opacity: 0.28, depthWrite: false }),
-        );
-        contactShadow.position.set(0, -2.11, -0.4);
-        contactShadow.scale.set(1.32, 0.12, 1);
-        scene.add(contactShadow);
+        const ambient = new THREE.HemisphereLight(0xfff1d5, 0x111b2b, 0.94);
+        const key = new THREE.RectAreaLight(0xffefd0, 4.7, 4.4, 4.7);
+        key.position.set(3.5, 4.4, 5.6);
+        key.lookAt(0, 0, 0);
+        const fill = new THREE.RectAreaLight(0xa7caff, 2.5, 3.4, 4);
+        fill.position.set(-4.1, 1.3, 3.9);
+        fill.lookAt(0, -0.15, 0);
+        const rim = new THREE.DirectionalLight(0xe4edff, 1.15);
+        rim.position.set(-2.8, 3.6, -4.2);
+        scene.add(ambient, key, fill, rim);
 
-        const ambient = new THREE.HemisphereLight(0xf5ead8, 0x080b10, 0.94);
-        const key = new THREE.DirectionalLight(0xfff0d0, 2.1);
-        key.position.set(3.6, 4.2, 5.4);
-        const coolRim = new THREE.DirectionalLight(0x8fc9ff, 0.72);
-        coolRim.position.set(-4.4, 0.6, 3.2);
-        const lowerFill = new THREE.DirectionalLight(0xffd5a2, 0.42);
-        lowerFill.position.set(2.2, -3.4, 3);
-        const rearLight = new THREE.DirectionalLight(0xd7e2ef, 1.25);
-        rearLight.position.set(-1.8, 2.5, -4.5);
-        scene.add(ambient, key, coolRim, lowerFill, rearLight);
+        const applyTheme = () => {
+          const dark = document.documentElement.classList.contains('dark');
+          renderer.toneMappingExposure = dark ? 0.83 : 0.9;
+          scene.environmentIntensity = dark ? 0.9 : 0.77;
+          ambient.intensity = dark ? 1.02 : 0.94;
+          ambient.groundColor.setHex(dark ? 0x080d16 : 0x3c4655);
+          key.intensity = dark ? 4.15 : 4.7;
+          fill.intensity = dark ? 2.8 : 2.5;
+          trophy.userData.contactShadow.material.opacity = dark ? 0.34 : 0.22;
+          renderer.render(scene, camera);
+        };
+        applyTheme();
+        themeObserver = new MutationObserver(applyTheme);
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
         const resize = () => {
           const { width, height } = frame.getBoundingClientRect();
           if (!width || !height) return;
           renderer.setSize(width, height, false);
-          const viewHeight = 5.55;
-          const viewWidth = viewHeight * (width / height);
-          camera.left = -viewWidth / 2;
-          camera.right = viewWidth / 2;
-          camera.top = viewHeight / 2;
-          camera.bottom = -viewHeight / 2;
+          camera.aspect = width / height;
           camera.updateProjectionMatrix();
+          renderer.render(scene, camera);
         };
-        observer = new ResizeObserver(resize);
-        observer.observe(frame);
+        resizeObserver = new ResizeObserver(resize);
+        resizeObserver.observe(frame);
         resize();
+        setRenderState('ready');
 
         let dragging = false;
-        let hasInteracted = false;
         let previousX = 0;
         let previousY = 0;
-        let targetRotation = -0.09;
-        let targetTilt = -0.018;
+        let targetRotation = -0.12;
+        let targetTilt = -0.025;
+        let velocity = 0;
+        let visible = false;
+        let running = false;
+        let introStartedAt = null;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+        const animate = (time) => {
+          if (disposed || !visible) {
+            running = false;
+            return;
+          }
+          if (introStartedAt === null) introStartedAt = time;
+          const introProgress = reduceMotion ? 1 : Math.min(1, (time - introStartedAt) / 360);
+          if (!dragging && !reduceMotion) {
+            targetRotation += velocity;
+            velocity *= 0.9;
+          }
+          trophy.rotation.y += (targetRotation - trophy.rotation.y) * 0.085;
+          trophy.rotation.x += (targetTilt - trophy.rotation.x) * 0.085;
+          trophy.position.y = 0.04 + (1 - introProgress) * 0.055;
+          renderer.render(scene, camera);
+          const settled = Math.abs(targetRotation - trophy.rotation.y) < 0.0007
+            && Math.abs(targetTilt - trophy.rotation.x) < 0.0007
+            && Math.abs(velocity) < 0.00008;
+          if (dragging || introProgress < 1 || !settled) animationFrame = window.requestAnimationFrame(animate);
+          else running = false;
+        };
+        const startAnimation = () => {
+          if (running || disposed) return;
+          running = true;
+          animationFrame = window.requestAnimationFrame(animate);
+        };
         const onPointerDown = (event) => {
           dragging = true;
-          hasInteracted = true;
           previousX = event.clientX;
           previousY = event.clientY;
+          velocity = 0;
           canvas.setPointerCapture?.(event.pointerId);
+          startAnimation();
         };
         const onPointerMove = (event) => {
           if (!dragging) return;
           const deltaX = event.clientX - previousX;
           const deltaY = event.clientY - previousY;
-          targetRotation += deltaX * 0.0045;
-          targetTilt = Math.max(-0.15, Math.min(0.12, targetTilt + deltaY * 0.004));
+          targetRotation += deltaX * 0.0065;
+          targetTilt = Math.max(-0.18, Math.min(0.14, targetTilt + deltaY * 0.004));
+          velocity = deltaX * 0.00085;
           previousX = event.clientX;
           previousY = event.clientY;
+          startAnimation();
         };
-        const onPointerUp = () => { dragging = false; };
+        const onPointerUp = () => {
+          dragging = false;
+          startAnimation();
+        };
         canvas.addEventListener('pointerdown', onPointerDown);
         canvas.addEventListener('pointermove', onPointerMove);
         canvas.addEventListener('pointerup', onPointerUp);
@@ -380,26 +505,17 @@ export default function SeasonTrophy3D({ label = 'Troféu de Julho' }) {
           canvas.removeEventListener('pointercancel', onPointerUp);
         };
 
-        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        let firstFrameRendered = false;
-        const animate = (time) => {
-          if (disposed) return;
-          if (!dragging && !reduceMotion) {
-            if (!hasInteracted) {
-              targetRotation = -0.09 + Math.sin(time * 0.00038) * 0.055;
-            }
+        intersectionObserver = new IntersectionObserver(([entry]) => {
+          visible = entry.isIntersecting;
+          if (visible) {
+            introStartedAt = null;
+            startAnimation();
+          } else {
+            window.cancelAnimationFrame(animationFrame);
+            running = false;
           }
-          trophy.rotation.y += (targetRotation - trophy.rotation.y) * 0.085;
-          trophy.rotation.x += (targetTilt - trophy.rotation.x) * 0.085;
-          trophy.position.y = 0.14 + (reduceMotion ? 0 : Math.sin(time * 0.0009) * 0.008);
-          renderer.render(scene, camera);
-          if (!firstFrameRendered && !disposed) {
-            firstFrameRendered = true;
-            setRenderState('ready');
-          }
-          animationFrame = window.requestAnimationFrame(animate);
-        };
-        animationFrame = window.requestAnimationFrame(animate);
+        }, { rootMargin: '80px' });
+        intersectionObserver.observe(frame);
 
         disposeScene = () => {
           trophy.userData.textures?.forEach((texture) => texture.dispose());
@@ -423,14 +539,16 @@ export default function SeasonTrophy3D({ label = 'Troféu de Julho' }) {
     return () => {
       disposed = true;
       window.cancelAnimationFrame(animationFrame);
-      observer?.disconnect();
+      resizeObserver?.disconnect();
+      intersectionObserver?.disconnect();
+      themeObserver?.disconnect();
       removePointerEvents();
       disposeScene();
       environmentTarget?.dispose();
       pmremGenerator?.dispose();
       renderer?.dispose();
     };
-  }, []);
+  }, [label]);
 
   return (
     <div ref={frameRef} className="hc-season-trophy-3d" data-render-state={renderState}>
@@ -439,7 +557,7 @@ export default function SeasonTrophy3D({ label = 'Troféu de Julho' }) {
         aria-label={`${label} em 3D. Arraste horizontalmente para observar a lateral e o verso.`}
       />
       {renderState === 'fallback' && (
-        <img className="hc-season-trophy-3d__fallback" src={TROPHY_IMAGE_URL} alt={label} />
+        <div className="hc-season-trophy-3d__fallback" role="img" aria-label={label}>HC</div>
       )}
     </div>
   );

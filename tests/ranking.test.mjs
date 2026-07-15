@@ -8,6 +8,7 @@ import {
   getPointsToAdvance,
   getRankPercentile,
   normalizeRanking,
+  normalizeRankingProfile,
   RANKING_SCORING,
 } from '../src/domain/ranking.js';
 
@@ -25,6 +26,14 @@ const publicAchievementsMigration = readFileSync(
 );
 const seasonTrophyMigration = readFileSync(
   new URL('../supabase/migrations/20260714_season_trophy_rewards.sql', import.meta.url),
+  'utf8',
+);
+const rankingProfileShowcaseMigration = readFileSync(
+  new URL('../supabase/migrations/20260715_ranking_profile_showcase.sql', import.meta.url),
+  'utf8',
+);
+const achievementRewardsReconciliation = readFileSync(
+  new URL('../supabase/migrations/20260715_reconcile_achievement_rewards.sql', import.meta.url),
   'utf8',
 );
 
@@ -114,6 +123,100 @@ test('normaliza dados antigos da RPC sem quebrar o ranking', () => {
   assert.equal(result[1].avatar_url, 'avatar.jpg');
 });
 
+test('normaliza a vitrine publica e aplica o perfil local ao proprio atleta', () => {
+  assert.deepEqual(normalizeRankingProfile({
+    bio: '  Treino cedo.  ',
+    primary_goal: 'performance',
+    avatar_frame: 'glass',
+  }), {
+    bio: 'Treino cedo.',
+    primary_goal: 'performance',
+    avatar_frame: 'glass',
+  });
+
+  const [viewer] = normalizeRanking(
+    [{ user_id: 'viewer', display_name: 'Ana', month_days: 1 }],
+    'viewer',
+    'avatar.jpg',
+    { bio: 'Consistência primeiro.', primary_goal: 'consistency', avatar_frame: 'blue' }
+  );
+  assert.equal(viewer.bio, 'Consistência primeiro.');
+  assert.equal(viewer.primary_goal, 'consistency');
+  assert.equal(viewer.avatar_frame, 'blue');
+});
+
+test('expoe no Ranking apenas bio, objetivo e moldura para atletas autenticados', () => {
+  assert.match(rankingProfileShowcaseMigration, /security definer/);
+  assert.match(rankingProfileShowcaseMigration, /auth\.uid\(\) is null/);
+  assert.match(rankingProfileShowcaseMigration, /bio text/);
+  assert.match(rankingProfileShowcaseMigration, /primary_goal text/);
+  assert.match(rankingProfileShowcaseMigration, /avatar_frame text/);
+  assert.match(rankingProfileShowcaseMigration, /grant execute .* to authenticated/);
+  assert.doesNotMatch(rankingProfileShowcaseMigration, /email|training_focus/);
+});
+
+test('usa a moldura escolhida sem os antigos contornos genericos no Ranking', () => {
+  const rankingPage = readFileSync(new URL('../src/components/pages/RankingPage.jsx', import.meta.url), 'utf8');
+  assert.match(rankingPage, /frame=\{entry\.avatar_frame\}/);
+  assert.doesNotMatch(rankingPage, /hc-climb-portrait__contours|hc-podium-medal__notch|ring=/);
+});
+
+test('mantem o perfil da Arena compacto e sem rolagens internas', () => {
+  const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+  assert.match(css, /\.hc-athlete-popup__surface\s*\{[^}]*overflow: hidden;/s);
+  assert.match(css, /\.hc-athlete-popup__medal-grid\s*\{[^}]*overflow: visible;[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/s);
+});
+
+test('mantem o novo podio coerente nos temas light e dark', () => {
+  const rankingPage = readFileSync(new URL('../src/components/pages/RankingPage.jsx', import.meta.url), 'utf8');
+  const podium3d = readFileSync(new URL('../src/components/ranking/Podium3D.jsx', import.meta.url), 'utf8');
+  const dashboard = readFileSync(new URL('../src/components/Dashboard.jsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+  assert.match(rankingPage, /hc-arena-podium__dome/);
+  assert.match(rankingPage, /<Podium3D \/>/);
+  assert.doesNotMatch(rankingPage, /CeremonySignal/);
+  assert.match(css, /\/\* Ranking Arena v2 \*\/[\s\S]*?\.hc-ranking-arena\s*\{[^}]*--arena-bg: #f2f2f7;[^}]*background: transparent;[^}]*color-scheme: light;/);
+  assert.match(css, /\.dark \.hc-ranking-arena\s*\{[^}]*--arena-bg: #050914;[^}]*background: transparent;[^}]*color-scheme: dark;/s);
+  assert.doesNotMatch(dashboard, /hc-app-shell--ranking/);
+  assert.doesNotMatch(css, /\.hc-app-shell--ranking/);
+  assert.match(css, /\.hc-arena-podium__dome\s*\{/);
+  assert.match(css, /\.dark \.hc-arena-podium\s*\{/);
+  assert.match(css, /\.hc-podium-3d\[data-render-state="ready"\] canvas/);
+  assert.match(podium3d, /new THREE\.WebGLRenderer/);
+  assert.match(podium3d, /new THREE\.LatheGeometry/);
+  assert.match(podium3d, /new THREE\.CylinderGeometry/);
+  assert.match(podium3d, /new THREE\.ExtrudeGeometry/);
+  assert.match(podium3d, /RectAreaLight/);
+  assert.match(podium3d, /roughnessMap: brushedTexture/);
+  assert.match(podium3d, /HDRLoader/);
+  assert.match(podium3d, /preserveDrawingBuffer: true/);
+  assert.doesNotMatch(podium3d, /new THREE\.TorusGeometry|new THREE\.PointLight\(0xfe0972/);
+});
+
+test('constroi o trofeu autoral com a linguagem 3D das medalhas', () => {
+  const trophy3d = readFileSync(new URL('../src/components/ranking/SeasonTrophy3D.jsx', import.meta.url), 'utf8');
+  assert.match(trophy3d, /createHybridTrophy/);
+  assert.match(trophy3d, /extrudedRing/);
+  assert.match(trophy3d, /new THREE\.ExtrudeGeometry/);
+  assert.match(trophy3d, /new THREE\.CatmullRomCurve3/);
+  assert.match(trophy3d, /new THREE\.TorusGeometry/);
+  assert.match(trophy3d, /createReliefIcon/);
+  assert.match(trophy3d, /createPlaqueTexture/);
+  assert.match(trophy3d, /RectAreaLight/);
+  assert.match(trophy3d, /new IntersectionObserver/);
+  assert.match(trophy3d, /preserveDrawingBuffer: true/);
+  assert.doesNotMatch(trophy3d, /arena-shield-july-reference/);
+});
+
+test('informa a moldura desbloqueada em todas as conquistas', () => {
+  const rankingPage = readFileSync(new URL('../src/components/pages/RankingPage.jsx', import.meta.url), 'utf8');
+  for (const badge of ['consistency_10', 'hybrid_complete', 'streak_7', 'top_10', 'podium', 'champion']) {
+    assert.match(rankingPage, new RegExp(`getFrameRewardLabel\\('${badge}'\\)`));
+  }
+  assert.match(rankingPage, /Libera \{badge\.reward\}/);
+  assert.match(rankingPage, /Recompensa exclusiva/);
+});
+
 test('expoe somente a vitrine agregada de medalhas para atletas autenticados', () => {
   assert.match(publicAchievementsMigration, /security definer/);
   assert.match(publicAchievementsMigration, /auth\.uid\(\) is not null/);
@@ -123,6 +226,16 @@ test('expoe somente a vitrine agregada de medalhas para atletas autenticados', (
   assert.doesNotMatch(publicAchievementsMigration, /daily_logs/);
   assert.doesNotMatch(publicAchievementsMigration, /snapshot\.rank <= 10/);
   assert.doesNotMatch(publicAchievementsMigration, /snapshot\.rank = 1/);
+});
+
+test('reconcilia medalhas publicas e premios usando as metricas finais', () => {
+  assert.match(achievementRewardsReconciliation, /create or replace function public\.derive_ranking_badges/);
+  assert.match(achievementRewardsReconciliation, /update public\.ranking_season_results result/);
+  assert.match(achievementRewardsReconciliation, /result\.badges is distinct from public\.derive_ranking_badges/);
+  assert.match(achievementRewardsReconciliation, /unnest\(public\.derive_ranking_badges/);
+  assert.match(achievementRewardsReconciliation, /required_badge = any\(public\.derive_ranking_badges/);
+  assert.match(achievementRewardsReconciliation, /grant execute .*get_athlete_achievement_showcase.* to authenticated/s);
+  assert.doesNotMatch(achievementRewardsReconciliation, /estude\.claudius|email/i);
 });
 
 test('entrega o trofeu apenas a campeoes de temporadas arquivadas', () => {

@@ -11,7 +11,7 @@ O Hibrid Club organiza a rotina do atleta hibrido, acompanha sua evolucao e tran
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-3FCF8E?logo=supabase&logoColor=111)](https://supabase.com/)
 [![Android](https://img.shields.io/badge/Android-APK-3DDC84?logo=android&logoColor=111)](https://github.com/claudiusigor/HIBRIDCLUB/releases/latest)
 
-[Abrir Hibrid Club](https://claudiusigor.github.io/HIBRIDCLUB/) | [Baixar para Android](https://github.com/claudiusigor/HIBRIDCLUB/releases/download/android-v1.0.27/hibrid-club-1.0.27-27.apk)
+[Abrir Hibrid Club](https://claudiusigor.github.io/HIBRIDCLUB/) | [Baixar para Android](https://github.com/claudiusigor/HIBRIDCLUB/releases/download/android-v1.0.31/hibrid-club-1.0.31-31.apk)
 
 ![Hibrid Club](public/HYBRIDCLUBBANNER.png)
 
@@ -123,7 +123,7 @@ O Hibrid Club pode ser utilizado diretamente pelo navegador ou instalado como ap
 
 ### Aplicativo Android
 
-[Baixar o APK 1.0.27](https://github.com/claudiusigor/HIBRIDCLUB/releases/download/android-v1.0.27/hibrid-club-1.0.27-27.apk)
+[Baixar o APK 1.0.31](https://github.com/claudiusigor/HIBRIDCLUB/releases/download/android-v1.0.31/hibrid-club-1.0.31-31.apk)
 
 O APK oficial e assinado e pode receber novas versoes sem exigir a desinstalacao do aplicativo anterior.
 
